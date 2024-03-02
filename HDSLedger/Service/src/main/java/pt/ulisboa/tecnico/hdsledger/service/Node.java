@@ -16,13 +16,15 @@ public class Node {
     private static final CustomLogger LOGGER = new CustomLogger(Node.class.getName());
     // Hardcoded path to files
     private static String nodesConfigPath = "src/main/resources/";
+    private static String private_key_path = "src/main/resources/";
 
     public static void main(String[] args) {
 
         try {
             // Command line arguments
             String id = args[0];
-            nodesConfigPath += args[1];
+            private_key_path += args[1];
+            nodesConfigPath += args[2];
 
             // Create configuration instances
             ProcessConfig[] nodeConfigs = new ProcessConfigBuilder().fromFile(nodesConfigPath);

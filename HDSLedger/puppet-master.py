@@ -11,7 +11,7 @@ terminal = "kitty"
 
 # Blockchain node configuration file name
 server_configs = [
-    "regular_config.json",
+    "regular_config.json"
 ]
 
 
@@ -30,10 +30,11 @@ with open(f"Service/src/main/resources/{server_config}") as f:
     data = json.load(f)
     processes = list()
     for key in data:
+        private_key_path = "privateKeys/rk_" + key['id'] + ".key"
         pid = os.fork()
         if pid == 0:
             os.system(
-                f"{terminal} sh -c \"cd Service; mvn exec:java -Dexec.args='{key['id']} {server_config}' ; sleep 500\"")
+                f"{terminal} sh -c \"cd Service; mvn exec:java -Dexec.args='{key['id']} {private_key_path} {server_config}' ; sleep 500\"")
             sys.exit()
 
 signal.signal(signal.SIGINT, quit_handler)
