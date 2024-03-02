@@ -10,6 +10,7 @@ import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.logging.Level;
 
+import pt.ulisboa.tecnico.hdsledger.communication.AppendMessage;
 import pt.ulisboa.tecnico.hdsledger.communication.CommitMessage;
 import pt.ulisboa.tecnico.hdsledger.communication.ConsensusMessage;
 import pt.ulisboa.tecnico.hdsledger.communication.Link;
@@ -135,6 +136,20 @@ public class NodeService implements UDPService {
         }
     }
 
+    /*
+     * Handle append messages. Starts the consesus
+     * with the value of the message
+     * 
+     * @param message Message to be handled
+     */
+    public void uponAppend(AppendMessage message) {
+        String value = message.getValue();
+        LOGGER.log(Level.INFO, MessageFormat.format("{0} - Received APPEND message: {1}", config.getId(), value));
+        
+        startConsensus(value);
+    }
+
+    
     /*
      * Handle pre prepare messages and if the message
      * came from leader and is justified them broadcast prepare
@@ -352,6 +367,9 @@ public class NodeService implements UDPService {
                         new Thread(() -> {
 
                             switch (message.getType()) {
+
+                                case APPEND ->
+                                    uponAppend((AppendMessage) message);
 
                                 case PRE_PREPARE ->
                                     uponPrePrepare((ConsensusMessage) message);
