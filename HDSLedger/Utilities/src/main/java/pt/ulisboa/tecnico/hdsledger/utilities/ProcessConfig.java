@@ -13,8 +13,14 @@ public class ProcessConfig {
 
     private String publicKey;
 
+    private boolean isClient;
+
     public boolean isLeader() {
         return isLeader;
+    }
+
+    public boolean isClient() {
+        return isClient;
     }
 
     public int getPort() {
