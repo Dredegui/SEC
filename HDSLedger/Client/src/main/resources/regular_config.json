@@ -1,0 +1,41 @@
+[
+    {   
+        "id": "1",
+        "isLeader": true,
+        "isClient": false,
+        "hostname": "localhost",
+        "port": 3001,
+        "publicKey": "src/main/resources/publicKeys/pk_1.key"
+    },
+    {
+        "id": "2",
+        "isLeader": false,
+        "isClient": false,
+        "hostname": "localhost",
+        "port": 3002,
+        "publicKey": "src/main/resources/publicKeys/pk_2.key"
+    },
+    {
+        "id": "3",
+        "isLeader": false,
+        "isClient": false,
+        "hostname": "localhost",
+        "port": 3003,
+        "publicKey": "src/main/resources/publicKeys/pk_3.key"
+    },
+    {
+        "id": "4",
+        "isLeader": false,
+        "isClient": false,
+        "hostname": "localhost",
+        "port": 3004,
+        "publicKey": "src/main/resources/publicKeys/pk_4.key"
+    },
+    {
+        "id": "client",
+        "isClient": true,
+        "hostname": "localhost",
+        "port": 3005,
+        "publicKey": "src/main/resources/publicKeys/clientPublic.key"
+    }    
+]
