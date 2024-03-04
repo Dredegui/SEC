@@ -2,14 +2,13 @@ package pt.ulisboa.tecnico.hdsledger.communication;
 
 import com.google.gson.Gson;
 
-public class AppendMessage extends Message{
+public class AppendMessage {
 
     // Value
     private String value;
 
     // This is a client id
-    public AppendMessage(String senderId, Type type, String value) {
-        super(senderId, type);
+    public AppendMessage(String value) {
         this.value = value;
     }
 
