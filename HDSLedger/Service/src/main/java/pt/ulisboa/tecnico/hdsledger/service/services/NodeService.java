@@ -364,6 +364,7 @@ public class NodeService implements UDPService {
             new Thread(() -> {
                 try {
                     while (true) {
+                
                         Message message = link.receive();
 
                         // Separate thread to handle each message
