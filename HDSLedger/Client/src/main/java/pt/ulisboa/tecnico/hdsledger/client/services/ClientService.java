@@ -15,7 +15,6 @@ public class ClientService {
         this.link = link;
     }
 
-    // Método para enviar uma solicitação de anexação ao serviço de blockchain
     public void append(String data) {
 
         ConsensusMessage consensusMessage = new ConsensusMessage("client", Message.Type.APPEND);
@@ -25,10 +24,4 @@ public class ClientService {
         link.broadcast(consensusMessage);
     }
 
-    // Método para receber a resposta do serviço de blockchain
-    /* public String receive() {
-        Message jsonResponse = link.receive();
-
-        return jsonResponse;
-    } */
 }
