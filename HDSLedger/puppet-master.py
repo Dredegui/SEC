@@ -33,8 +33,9 @@ with open(f"Service/src/main/resources/{server_config}") as f:
         private_key_path = "privateKeys/rk_" + key['id'] + ".key"
         pid = os.fork()
         if pid == 0:
-            os.system(
-                f"{terminal} sh -c \"cd Service; mvn exec:java -Dexec.args='{key['id']} {private_key_path} {server_config}' ; sleep 500\"")
+            if key['isClient'] == False:
+                os.system(
+                    f"{terminal} sh -c \"cd Service; mvn exec:java -Dexec.args='{key['id']} {private_key_path} {server_config}' ; sleep 500\"")
             sys.exit()
 
 signal.signal(signal.SIGINT, quit_handler)
