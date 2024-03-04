@@ -11,8 +11,8 @@ import java.util.Arrays;
 
 public class Client {
 
-    private static String private_key_path = "src/main/resources/privateKeys/client.key";
     private static String nodesConfigPath = "src/main/resources/regular_config.json";
+    private static String private_key_path = "src/main/resources/";
     
     private ClientService clientService;
 
@@ -60,6 +60,7 @@ public class Client {
 
         // Command line arguments
         String id = args[0];
+        private_key_path += args[1];
 
         // Create configuration instances
         ProcessConfig[] nodeConfigs = new ProcessConfigBuilder().fromFile(nodesConfigPath);
