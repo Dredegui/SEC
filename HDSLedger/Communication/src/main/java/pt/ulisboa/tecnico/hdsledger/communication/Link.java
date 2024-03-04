@@ -7,6 +7,7 @@ import pt.ulisboa.tecnico.hdsledger.utilities.*;
 
 import java.io.IOException;
 import java.net.*;
+import java.security.interfaces.RSAPublicKey;
 import java.text.MessageFormat;
 import java.util.*;
 import java.util.concurrent.ConcurrentHashMap;
@@ -14,6 +15,18 @@ import java.util.concurrent.ConcurrentLinkedQueue;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.logging.Level;
 import java.util.logging.LogManager;
+import java.security.PublicKey;
+import java.security.PrivateKey;
+import java.io.DataOutputStream;
+import java.io.File;
+import java.io.FileOutputStream;
+import java.nio.file.Files;
+import java.nio.file.Paths;
+import java.security.KeyFactory;
+import java.security.spec.PKCS8EncodedKeySpec;
+import java.security.spec.X509EncodedKeySpec;
+import java.security.Signature;
+import javax.crypto.Cipher;
 
 public class Link {
 
@@ -67,13 +80,86 @@ public class Link {
         }
     }
 
+    public static PublicKey getPublicKey(String publicKeyPath) {
+        try {
+            byte[] keyBytes = Files.readAllBytes(Paths.get(publicKeyPath));
+            return KeyFactory.getInstance("RSA").generatePublic(new X509EncodedKeySpec(keyBytes));
+        } catch (Exception e) {
+            e.printStackTrace();
+            throw new HDSSException(ErrorMessage.ExtractKeyError);
+        }
+	}
+
+    public static PrivateKey getPrivateKey(String privateKeyPath) {
+        try {
+            byte[] keyBytes = Files.readAllBytes(Paths.get(privateKeyPath));
+            return KeyFactory.getInstance("RSA").generatePrivate(new PKCS8EncodedKeySpec(keyBytes));
+        } catch (Exception e) {
+            e.printStackTrace();
+            throw new HDSSException(ErrorMessage.ExtractKeyError);
+        }
+    }
+
     // Function that generates a key signature from a value
     public String sign(String nodeId, String value) {
         // Other node public key
         String digitalSignature = "";
+        // others node public .key file path
         String publicKey = nodes.get(nodeId).getPublicKey();
-        
+        //extract public key from .key file
+        PublicKey pubKey = getPublicKey(publicKey);
+        // current node private key
+        PrivateKey privKey = getPrivateKey(privateKey);
+        try {
+            // Create a Signature object and initialize it with the private key
+            Signature rsa = Signature.getInstance("SHA256withRSA");
+            rsa.initSign(privKey);
+            // Update and sign the data
+            rsa.update(value.getBytes());
+            byte[] signature = rsa.sign();
+            digitalSignature = Base64.getEncoder().encodeToString(signature);
+        } catch (Exception e) { // TODO: improve exception handling and specification
+            e.printStackTrace();
+        }
+        // Encrypt digital singature with other node public key
+        try {
+            Cipher cipher = Cipher.getInstance("RSA");
+            cipher.init(Cipher.ENCRYPT_MODE, pubKey);
+            byte[] encryptedSignature = cipher.doFinal(digitalSignature.getBytes());
+            digitalSignature = Base64.getEncoder().encodeToString(encryptedSignature);
+        } catch (Exception e) { // TODO: improve exception handling and specification
+            e.printStackTrace();
+        }
         return digitalSignature;
+    }
+
+    // inverse of the sign function aka validate
+    public boolean validate(String nodeId, String value, String signature) {
+        // Other node public key
+        String publicKey = nodes.get(nodeId).getPublicKey();
+        //extract public key from .key file
+        PublicKey pubKey = getPublicKey(publicKey);
+        // current node private key
+        PrivateKey privKey = getPrivateKey(privateKey);
+        try {
+            // Decrypt digital singature with current node private key
+            Cipher cipher = Cipher.getInstance("RSA");
+            cipher.init(Cipher.DECRYPT_MODE, privKey);
+            byte[] decryptedSignature = cipher.doFinal(Base64.getDecoder().decode(signature));
+            signature = new String(decryptedSignature);
+        } catch (Exception e) { // TODO: improve exception handling and specification
+            e.printStackTrace();
+        }
+        // validate signature
+        try {
+            Signature rsa = Signature.getInstance("SHA256withRSA");
+            rsa.initVerify(pubKey);
+            rsa.update(value.getBytes());
+            return rsa.verify(Base64.getDecoder().decode(signature));
+        } catch (Exception e) { // TODO: improve exception handling and specification
+            e.printStackTrace();
+            return false;
+        }
     }
 
     public void ackAll(List<Integer> messageIds) {
