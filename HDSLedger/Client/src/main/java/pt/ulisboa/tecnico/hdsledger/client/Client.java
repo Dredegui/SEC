@@ -1,20 +1,18 @@
 package pt.ulisboa.tecnico.hdsledger.client;
 
 import pt.ulisboa.tecnico.hdsledger.client.services.ClientService;
-import pt.ulisboa.tecnico.hdsledger.communication.AppendMessage;
 import pt.ulisboa.tecnico.hdsledger.communication.ConsensusMessage;
 import pt.ulisboa.tecnico.hdsledger.utilities.ProcessConfig;
 import pt.ulisboa.tecnico.hdsledger.utilities.ProcessConfigBuilder;
 import pt.ulisboa.tecnico.hdsledger.communication.Link;
 
+import java.util.Scanner;
 import java.util.Arrays;
 
 public class Client {
 
-    //private static final CustomLogger LOGGER = new CustomLogger(Client.class.getName());
-    // Hardcoded path to files
-    private static String private_key_path = "/home/miguel/SEC/Projeto/SEC/HDSLedger/Service/src/main/resources/privateKeys/client.key";
-    private static String nodesConfigPath = "/home/miguel/SEC/Projeto/SEC/HDSLedger/Service/src/main/resources/regular_config.json";
+    private static String private_key_path = "src/main/resources/privateKeys/client.key";
+    private static String nodesConfigPath = "src/main/resources/regular_config.json";
     
     private ClientService clientService;
 
@@ -22,13 +20,41 @@ public class Client {
         this.clientService = clientService;
     }
     
-    public void append(String data) {
-        clientService.append(data);
+    private void appendMessage(String message) {
+        clientService.append(message);
+
+        System.out.println("Message appended to the chain successfully.");
     }
 
-    /* public String receive() {
-        return clientService.receive();
-    } */
+    public void cli() {
+            Scanner scanner = new Scanner(System.in);
+            boolean running = true;
+    
+            while (running) {
+                System.out.println("Choose an option:");
+                System.out.println("1. Append message to the chain");
+                System.out.println("2. Exit");
+    
+                int choice = scanner.nextInt();
+                scanner.nextLine();
+    
+                switch (choice) {
+                    case 1:
+                        System.out.print("Enter the message to append to the chain: ");
+                        String message = scanner.nextLine();
+                        appendMessage(message);
+                        break;
+                    case 2:
+                        running = false;
+                        break;
+                    default:
+                        System.out.println("Invalid choice. Please try again.");
+                }
+            }
+    
+            // Close the scanner
+            scanner.close();
+        }
 
     public static void main(String[] args) {
 
@@ -46,9 +72,7 @@ public class Client {
         ClientService clientService = new ClientService(linkToNodes);
         Client client = new Client(clientService);
 
-        client.append("Bitcoin");
-        System.out.println("Data sent to blockchain");
-        /* String confirmation = client.receive();
-        System.out.println(confirmation); */
+        // Start CLI
+        client.cli();
     }
 }
