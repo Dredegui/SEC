@@ -142,8 +142,11 @@ public class NodeService implements UDPService {
      * 
      * @param message Message to be handled
      */
-    public void uponAppend(AppendMessage message) {
-        String value = message.getValue();
+    public void uponAppend(ConsensusMessage message) {
+
+        AppendMessage appendMessage = message.deserializeAppendMessage();
+
+        String value = appendMessage.getValue();
         LOGGER.log(Level.INFO, MessageFormat.format("{0} - Received APPEND message: {1}", config.getId(), value));
         
         startConsensus(value);
@@ -369,7 +372,7 @@ public class NodeService implements UDPService {
                             switch (message.getType()) {
 
                                 case APPEND ->
-                                    uponAppend((AppendMessage) message);
+                                    uponAppend((ConsensusMessage) message);
 
                                 case PRE_PREPARE ->
                                     uponPrePrepare((ConsensusMessage) message);
