@@ -25,7 +25,7 @@ def quit_handler(*args):
 # Compile classes
 os.system("mvn clean install")
 
-# Spawn blockchain nodes
+# Spawn blockchain nodes and clients
 with open(f"Service/src/main/resources/{server_config}") as f:
     data = json.load(f)
     processes = list()
@@ -33,9 +33,13 @@ with open(f"Service/src/main/resources/{server_config}") as f:
         private_key_path = "privateKeys/rk_" + key['id'] + ".key"
         pid = os.fork()
         if pid == 0:
-            if key['isClient'] == False:
+            if "client" not in key['id']:
                 os.system(
                     f"{terminal} sh -c \"cd Service; mvn exec:java -Dexec.args='{key['id']} {private_key_path} {server_config}' ; sleep 500\"")
+            else:
+                os.system(
+                    f"{terminal} sh -c \"cd Client; mvn exec:java -Dexec.args='{key['id']} {private_key_path}' ; sleep 500\""
+                )
             sys.exit()
 
 signal.signal(signal.SIGINT, quit_handler)
