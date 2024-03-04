@@ -6,6 +6,8 @@ import pt.ulisboa.tecnico.hdsledger.communication.Message.Type;
 import pt.ulisboa.tecnico.hdsledger.utilities.*;
 
 import java.io.IOException;
+import java.io.PrintWriter;
+import java.io.StringWriter;
 import java.net.*;
 import java.security.interfaces.RSAPublicKey;
 import java.text.MessageFormat;
@@ -20,6 +22,7 @@ import java.security.PrivateKey;
 import java.io.DataOutputStream;
 import java.io.File;
 import java.io.FileOutputStream;
+import java.io.FileWriter;
 import java.nio.file.Files;
 import java.nio.file.Paths;
 import java.security.KeyFactory;
@@ -27,6 +30,7 @@ import java.security.spec.PKCS8EncodedKeySpec;
 import java.security.spec.X509EncodedKeySpec;
 import java.security.Signature;
 import javax.crypto.Cipher;
+
 
 public class Link {
 
@@ -83,9 +87,14 @@ public class Link {
     public static PublicKey getPublicKey(String publicKeyPath) {
         try {
             byte[] keyBytes = Files.readAllBytes(Paths.get(publicKeyPath));
+            // remove the header, footer and newlines from key
+            String uKey = new String(keyBytes);
+            uKey = uKey.replace("-----BEGIN PUBLIC KEY-----", "");
+            uKey = uKey.replace("-----END PUBLIC KEY-----", "");
+            uKey = uKey.replaceAll("\\s+", "");
+            keyBytes = Base64.getDecoder().decode(uKey);
             return KeyFactory.getInstance("RSA").generatePublic(new X509EncodedKeySpec(keyBytes));
         } catch (Exception e) {
-            e.printStackTrace();
             throw new HDSSException(ErrorMessage.ExtractKeyError);
         }
 	}
@@ -93,21 +102,23 @@ public class Link {
     public static PrivateKey getPrivateKey(String privateKeyPath) {
         try {
             byte[] keyBytes = Files.readAllBytes(Paths.get(privateKeyPath));
-            return KeyFactory.getInstance("RSA").generatePrivate(new PKCS8EncodedKeySpec(keyBytes));
+            // remove the header, footer and newlines from key
+            String rKey = new String(keyBytes);
+            rKey = rKey.replace("-----BEGIN PRIVATE KEY-----", "");
+            rKey = rKey.replace("-----END PRIVATE KEY-----", "");
+            rKey = rKey.replaceAll("\\s+", "");
+            keyBytes = Base64.getDecoder().decode(rKey);
+            KeyFactory keyFactory = KeyFactory.getInstance("RSA");
+            PKCS8EncodedKeySpec keySpec = new PKCS8EncodedKeySpec(keyBytes);
+            return keyFactory.generatePrivate(keySpec);
         } catch (Exception e) {
-            e.printStackTrace();
             throw new HDSSException(ErrorMessage.ExtractKeyError);
         }
     }
 
     // Function that generates a key signature from a value
-    public String sign(String nodeId, String value) {
-        // Other node public key
-        String digitalSignature = "";
-        // others node public .key file path
-        String publicKey = nodes.get(nodeId).getPublicKey();
-        //extract public key from .key file
-        PublicKey pubKey = getPublicKey(publicKey);
+    public byte[] sign(byte[] data) {
+        byte[] signature = new byte[256];
         // current node private key
         PrivateKey privKey = getPrivateKey(privateKey);
         try {
@@ -115,47 +126,26 @@ public class Link {
             Signature rsa = Signature.getInstance("SHA256withRSA");
             rsa.initSign(privKey);
             // Update and sign the data
-            rsa.update(value.getBytes());
-            byte[] signature = rsa.sign();
-            digitalSignature = Base64.getEncoder().encodeToString(signature);
+            rsa.update(data);
+            signature = rsa.sign();
         } catch (Exception e) { // TODO: improve exception handling and specification
             e.printStackTrace();
         }
-        // Encrypt digital singature with other node public key
-        try {
-            Cipher cipher = Cipher.getInstance("RSA");
-            cipher.init(Cipher.ENCRYPT_MODE, pubKey);
-            byte[] encryptedSignature = cipher.doFinal(digitalSignature.getBytes());
-            digitalSignature = Base64.getEncoder().encodeToString(encryptedSignature);
-        } catch (Exception e) { // TODO: improve exception handling and specification
-            e.printStackTrace();
-        }
-        return digitalSignature;
+        return signature;
     }
 
     // inverse of the sign function aka validate
-    public boolean validate(String nodeId, String value, String signature) {
+    public boolean validate(String nodeId, byte[] data, byte[] signature) {
         // Other node public key
         String publicKey = nodes.get(nodeId).getPublicKey();
         //extract public key from .key file
         PublicKey pubKey = getPublicKey(publicKey);
-        // current node private key
-        PrivateKey privKey = getPrivateKey(privateKey);
-        try {
-            // Decrypt digital singature with current node private key
-            Cipher cipher = Cipher.getInstance("RSA");
-            cipher.init(Cipher.DECRYPT_MODE, privKey);
-            byte[] decryptedSignature = cipher.doFinal(Base64.getDecoder().decode(signature));
-            signature = new String(decryptedSignature);
-        } catch (Exception e) { // TODO: improve exception handling and specification
-            e.printStackTrace();
-        }
         // validate signature
         try {
             Signature rsa = Signature.getInstance("SHA256withRSA");
             rsa.initVerify(pubKey);
-            rsa.update(value.getBytes());
-            return rsa.verify(Base64.getDecoder().decode(signature));
+            rsa.update(data);
+            return rsa.verify(signature);
         } catch (Exception e) { // TODO: improve exception handling and specification
             e.printStackTrace();
             return false;
@@ -212,13 +202,14 @@ public class Link {
 
                     return;
                 }
-
+                byte[] buf = new Gson().toJson(data).getBytes();
+                byte[] signature = sign(buf);
                 for (;;) {
                     LOGGER.log(Level.INFO, MessageFormat.format(
                             "{0} - Sending {1} message to {2}:{3} with message ID {4} - Attempt #{5}", config.getId(),
                             data.getType(), destAddress, destPort, messageId, count++));
 
-                    unreliableSend(destAddress, destPort, data);
+                    unreliableSend(destAddress, destPort, data, signature);
 
                     // Wait (using exponential back-off), then look for ACK
                     Thread.sleep(sleepTime);
@@ -249,11 +240,16 @@ public class Link {
      *
      * @param data The message to be sent
      */
-    public void unreliableSend(InetAddress hostname, int port, Message data) {
+    public void unreliableSend(InetAddress hostname, int port, Message data, byte[] signature) {
         new Thread(() -> {
             try {
                 byte[] buf = new Gson().toJson(data).getBytes();
-                DatagramPacket packet = new DatagramPacket(buf, buf.length, hostname, port);
+                // Add signature to the message
+                byte[] bufWithSignature = new byte[buf.length + signature.length];
+                System.arraycopy(buf, 0, bufWithSignature, 0, buf.length);
+                System.arraycopy(signature, 0, bufWithSignature, buf.length, signature.length);
+                
+                DatagramPacket packet = new DatagramPacket(bufWithSignature, bufWithSignature.length, hostname, port);
                 socket.send(packet);
             } catch (IOException e) {
                 e.printStackTrace();
@@ -277,14 +273,22 @@ public class Link {
             local = true; 
             this.receivedAcks.add(message.getMessageId());
         } else {
+            // TODO: Check if buffer size is enough
             byte[] buf = new byte[65535];
             response = new DatagramPacket(buf, buf.length);
-
+            
             socket.receive(response);
 
             byte[] buffer = Arrays.copyOfRange(response.getData(), 0, response.getLength());
-            serialized = new String(buffer);
+            // split the buffer into the message and the signature
+            byte[] messageBuffer = Arrays.copyOfRange(buffer, 0, buffer.length - 256);
+            byte[] signature = Arrays.copyOfRange(buffer, buffer.length - 256, buffer.length);
+            serialized = new String(messageBuffer);
             message = new Gson().fromJson(serialized, Message.class);
+            // verify the signature
+            if (!validate(message.getSenderId(), messageBuffer, signature)) {
+                throw new HDSSException(ErrorMessage.InvalidSignature);
+            }
         }
 
         String senderId = message.getSenderId();
@@ -343,12 +347,14 @@ public class Link {
 
             Message responseMessage = new Message(this.config.getId(), Message.Type.ACK);
             responseMessage.setMessageId(messageId);
-
+            // sign the ACK
+            byte[] buf = new Gson().toJson(responseMessage).getBytes();
+            byte[] signature = sign(buf);
             // ACK is sent without needing for another ACK because
             // we're assuming an eventually synchronous network
             // Even if a node receives the message multiple times,
             // it will discard duplicates
-            unreliableSend(address, port, responseMessage);
+            unreliableSend(address, port, responseMessage, signature);
         }
         
         return message;
