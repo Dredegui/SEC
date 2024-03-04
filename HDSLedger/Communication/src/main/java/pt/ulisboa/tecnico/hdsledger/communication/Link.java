@@ -312,6 +312,9 @@ public class Link {
         }
 
         switch (message.getType()) {
+            case APPEND -> {
+                return message;
+            }
             case PRE_PREPARE -> {
                 return message;
             }
