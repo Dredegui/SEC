@@ -1,6 +1,7 @@
 package pt.ulisboa.tecnico.hdsledger.service.services;
 
 import java.io.IOException;
+import java.sql.Time;
 import java.text.MessageFormat;
 import java.util.ArrayList;
 import java.util.Collection;
@@ -9,6 +10,8 @@ import java.util.Optional;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.logging.Level;
+import java.util.Timer;
+import java.util.TimerTask;
 
 import pt.ulisboa.tecnico.hdsledger.communication.AppendMessage;
 import pt.ulisboa.tecnico.hdsledger.communication.CommitMessage;
@@ -54,6 +57,10 @@ public class NodeService implements UDPService {
     // Ledger (for now, just a list of strings)
     private ArrayList<String> ledger = new ArrayList<String>();
 
+    private Timer timer;
+    
+    private TimerTask task;
+
     public NodeService(Link link, ProcessConfig config,
             ProcessConfig leaderConfig, ProcessConfig[] nodesConfig) {
 
@@ -64,6 +71,8 @@ public class NodeService implements UDPService {
 
         this.prepareMessages = new MessageBucket(nodesConfig.length);
         this.commitMessages = new MessageBucket(nodesConfig.length);
+
+        this.timer = new Timer();
     }
 
     public ProcessConfig getConfig() {
@@ -92,6 +101,34 @@ public class NodeService implements UDPService {
                 .build();
 
         return consensusMessage;
+    }
+
+    public synchronized void activateTimer(long delay) {
+        if (task != null) {
+            task.cancel();
+        }
+
+        task = new TimerTask() {
+            @Override
+            public void run() {
+                uponTimer();
+            }
+        };
+
+        timer.schedule(task, delay);
+    }
+
+    private void uponTimer() {
+        LOGGER.log(Level.INFO, MessageFormat.format("{0} - Timer expired", config.getId()));
+
+        //activateTimer(1000);
+    }
+
+    public synchronized void stopTimer() {
+        if (task != null) {
+            task.cancel();
+            timer.purge();
+        }
     }
 
     /*
@@ -163,7 +200,7 @@ public class NodeService implements UDPService {
 
         int consensusInstance = message.getConsensusInstance();
         int round = message.getRound();
-        String senderId = message.getSenderId();
+        String senderId = message.getSenderId(); 
         int senderMessageId = message.getMessageId();
 
         PrePrepareMessage prePrepareMessage = message.deserializePrePrepareMessage();
@@ -364,7 +401,7 @@ public class NodeService implements UDPService {
             new Thread(() -> {
                 try {
                     while (true) {
-                
+                        
                         Message message = link.receive();
 
                         // Separate thread to handle each message
