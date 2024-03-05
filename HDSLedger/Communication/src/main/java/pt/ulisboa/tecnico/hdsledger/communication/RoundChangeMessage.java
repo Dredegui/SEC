@@ -5,15 +5,15 @@ import com.google.gson.Gson;
 public class RoundChangeMessage {
 
     // Value
-    private String preparedRound;
+    private int preparedRound;
     private String preparedValue;
 
-    public RoundChangeMessage(String preparedRound, String preparedValue) {
+    public RoundChangeMessage(int preparedRound, String preparedValue) {
         this.preparedRound = preparedRound;
         this.preparedValue = preparedValue;
     }
 
-    public String getPreparedRound() {
+    public int getPreparedRound() {
         return preparedRound;
     }
 
