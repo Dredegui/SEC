@@ -8,6 +8,7 @@ import java.util.concurrent.ConcurrentHashMap;
 import pt.ulisboa.tecnico.hdsledger.communication.CommitMessage;
 import pt.ulisboa.tecnico.hdsledger.communication.ConsensusMessage;
 import pt.ulisboa.tecnico.hdsledger.communication.PrepareMessage;
+import pt.ulisboa.tecnico.hdsledger.communication.RoundChangeMessage;
 import pt.ulisboa.tecnico.hdsledger.utilities.CustomLogger;
 
 public class MessageBucket {
@@ -15,11 +16,12 @@ public class MessageBucket {
     private static final CustomLogger LOGGER = new CustomLogger(MessageBucket.class.getName());
     // Quorum size
     private final int quorumSize;
+    private final int f;
     // Instance -> Round -> Sender ID -> Consensus message
     private final Map<Integer, Map<Integer, Map<String, ConsensusMessage>>> bucket = new ConcurrentHashMap<>();
 
     public MessageBucket(int nodeCount) {
-        int f = Math.floorDiv(nodeCount - 1, 3);
+        f = Math.floorDiv(nodeCount - 1, 3);
         quorumSize = Math.floorDiv(nodeCount + f, 2) + 1;
     }
 
@@ -70,6 +72,42 @@ public class MessageBucket {
         // greater than or equal to the quorum size
         return frequency.entrySet().stream().filter((Map.Entry<String, Integer> entry) -> {
             return entry.getValue() >= quorumSize;
+        }).map((Map.Entry<String, Integer> entry) -> {
+            return entry.getKey();
+        }).findFirst();
+    }
+
+    public Optional<String> hasValidRoundChangeQuorum(String nodeId, int instance, int round) {
+        // Create mapping of value to frequency
+        HashMap<String, Integer> frequency = new HashMap<>();
+        bucket.get(instance).get(round).values().forEach((message) -> {
+            RoundChangeMessage roundChangeMessage = message.deserializeRoundChangeMessage();
+            String preparedValue = roundChangeMessage.getPreparedValue();
+            frequency.put(preparedValue, frequency.getOrDefault(preparedValue, 0) + 1);
+        });
+
+        // Only one value (if any, thus the optional) will have a frequency
+        // greater than or equal to the quorum size
+        return frequency.entrySet().stream().filter((Map.Entry<String, Integer> entry) -> {
+            return entry.getValue() >= quorumSize;
+        }).map((Map.Entry<String, Integer> entry) -> {
+            return entry.getKey();
+        }).findFirst();
+    }
+
+    public Optional<String> hasValidMoreThanFQuorum(String nodeId, int instance, int round) {
+        // Create mapping of value to frequency
+        HashMap<String, Integer> frequency = new HashMap<>();
+        bucket.get(instance).get(round).values().forEach((message) -> {
+            RoundChangeMessage roundChangeMessage = message.deserializeRoundChangeMessage();
+            String preparedValue = roundChangeMessage.getPreparedValue();
+            frequency.put(preparedValue, frequency.getOrDefault(preparedValue, 0) + 1);
+        });
+
+        // Only one value (if any, thus the optional) will have a frequency
+        // greater than or equal to the f+1 messages with at least one correct process
+        return frequency.entrySet().stream().filter((Map.Entry<String, Integer> entry) -> {
+            return entry.getValue() >= f+1;
         }).map((Map.Entry<String, Integer> entry) -> {
             return entry.getKey();
         }).findFirst();
