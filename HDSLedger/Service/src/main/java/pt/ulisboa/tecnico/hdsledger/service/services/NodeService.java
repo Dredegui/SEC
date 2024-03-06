@@ -470,6 +470,9 @@ public class NodeService implements UDPService {
 
                             switch (message.getType()) {
 
+                                case ROUND_CHANGE ->
+                                    uponRoundChange((ConsensusMessage) message);
+
                                 case APPEND ->
                                     uponAppend((ConsensusMessage) message);
 
