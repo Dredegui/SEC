@@ -5,6 +5,9 @@ import java.util.Map;
 import java.util.Optional;
 import java.util.concurrent.ConcurrentHashMap;
 
+import javax.swing.text.html.Option;
+import org.apache.commons.lang3.tuple.Pair;
+
 import pt.ulisboa.tecnico.hdsledger.communication.CommitMessage;
 import pt.ulisboa.tecnico.hdsledger.communication.ConsensusMessage;
 import pt.ulisboa.tecnico.hdsledger.communication.PrepareMessage;
@@ -77,6 +80,15 @@ public class MessageBucket {
         }).findFirst();
     }
 
+    // check if every (pr, pv) pair from each prepare messages is equal to (pr, pv) from the highest prepared round
+    public boolean checkHighestPrepared(int instance, int round, int highestPreparedRound, String highestPreparedValue) {
+        return bucket.get(instance).get(round).values().stream().allMatch((message) -> {
+            int prepareRound = message.getRound();
+            PrepareMessage prepareMessage = message.deserializePrepareMessage();
+            return prepareRound == highestPreparedRound && prepareMessage.getValue().equals(highestPreparedValue);
+        });
+    }
+
     public Optional<String> hasValidRoundChangeQuorum(String nodeId, int instance, int round) {
         // Create mapping of value to frequency
         HashMap<String, Integer> frequency = new HashMap<>();
@@ -95,15 +107,17 @@ public class MessageBucket {
         }).findFirst();
     }
 
-    public Optional<String> hasValidMoreThanFQuorum(String nodeId, int instance, int round) {
+    public Optional<String> hasValidMoreThanFQuorum(String nodeId, int instance, int currentRound, int round) {
         // Create mapping of value to frequency
         HashMap<String, Integer> frequency = new HashMap<>();
-        bucket.get(instance).get(round).values().forEach((message) -> {
-            RoundChangeMessage roundChangeMessage = message.deserializeRoundChangeMessage();
-            String preparedValue = roundChangeMessage.getPreparedValue();
-            frequency.put(preparedValue, frequency.getOrDefault(preparedValue, 0) + 1);
-        });
-
+        // from currentRound not included to round count the number of messages with the same value
+        for (int i = currentRound + 1; i <= round; i++) {
+            bucket.get(instance).get(i).values().forEach((message) -> {
+                RoundChangeMessage roundChangeMessage = message.deserializeRoundChangeMessage();
+                String preparedValue = roundChangeMessage.getPreparedValue();
+                frequency.put(preparedValue, frequency.getOrDefault(preparedValue, 0) + 1);
+            });
+        }
         // Only one value (if any, thus the optional) will have a frequency
         // greater than or equal to the f+1 messages with at least one correct process
         return frequency.entrySet().stream().filter((Map.Entry<String, Integer> entry) -> {
@@ -115,5 +129,41 @@ public class MessageBucket {
 
     public Map<String, ConsensusMessage> getMessages(int instance, int round) {
         return bucket.get(instance).get(round);
+    }
+
+    public int getRoundChangeMinRound(int instance, int currentRound, int round) {
+        int minRound = round;
+        for (int i = currentRound + 1; i <= round; i++) {
+            if (bucket.get(instance).containsKey(i)) {
+                minRound = i;
+                break;
+            }
+        }
+        return minRound;
+    }
+
+    // Helper function that returns a tuple (pr, pv) where pr and pv are, respectively, the prepared round and the prepared value of the ROUND-CHANGE message in Qrc with the highest prepared round
+    public Optional<Pair<Integer, String>> getHighestPreparedRound(int instance, int round) {
+        int highestPreparedRound = -1;
+        String highestPreparedValue = null;
+        for (ConsensusMessage message : bucket.get(instance).get(round).values()) {
+            RoundChangeMessage roundChangeMessage = message.deserializeRoundChangeMessage();
+            int prj = roundChangeMessage.getPreparedRound(); 
+            if (prj > highestPreparedRound) {
+                highestPreparedRound = prj;
+                highestPreparedValue = roundChangeMessage.getPreparedValue();
+            }
+        }
+        return highestPreparedRound == -1 ? Optional.empty() : Optional.of(Pair.of(highestPreparedRound, highestPreparedValue));
+    }
+    
+    // Justify the round change
+    public boolean allNullRoundChange(int instance, int round) {
+        // check if every prepared value and prepared round from each message from the round is null
+        return bucket.get(instance).get(round).values().stream().allMatch((message) -> {
+            RoundChangeMessage roundChangeMessage = message.deserializeRoundChangeMessage();
+            return roundChangeMessage.getPreparedValue() == null && roundChangeMessage.getPreparedRound() == -1;
+        });
+        
     }
 }
