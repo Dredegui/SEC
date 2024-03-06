@@ -19,6 +19,10 @@ public class ProcessConfig {
         return isLeader;
     }
 
+    public boolean isLeader(int round) {
+        return Integer.toString(round).equals(id);
+    }
+
     public boolean isClient() {
         return isClient;
     }
@@ -37,6 +41,16 @@ public class ProcessConfig {
 
     public String getPublicKey() {
         return publicKey;
+    }
+
+    public void updateLeader(int round) {
+        // convert round to string
+        String sRound = Integer.toString(round);
+        if (sRound.equals(id)) {
+            isLeader = true;
+        } else {
+            isLeader = false;
+        }
     }
 
 
