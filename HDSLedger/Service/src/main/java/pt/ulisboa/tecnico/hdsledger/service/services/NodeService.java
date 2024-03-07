@@ -182,15 +182,15 @@ public class NodeService implements UDPService {
         }
     }
 
-    public boolean justifyRoundChange(int instance, int round) { 
+    public boolean justifyRoundChange(int instance, int round, int preparedRound) { 
         boolean everyNull =  roundChangeMessages.allNullRoundChange(instance, round);
         if (!everyNull) {
-            Optional<String> validQuorum = prepareMessages.hasValidPrepareQuorum(null, instance, round);
+            Optional<String> validQuorum = prepareMessages.hasValidPrepareQuorum(null, instance, preparedRound);
             Optional<Pair<Integer, String>> highestPrepared = roundChangeMessages.getHighestPreparedRound(instance, round);
             boolean checkHighestPrepared = false;
             if (validQuorum.isPresent() && highestPrepared.isPresent()) {
                 // check if every (pr, pv) pair from each prepare messages is equal to (pr, pv) from the highest prepared round
-                checkHighestPrepared = prepareMessages.checkHighestPrepared(instance, round, highestPrepared.get().getLeft(), highestPrepared.get().getRight()); 
+                checkHighestPrepared = prepareMessages.checkHighestPrepared(instance, preparedRound, highestPrepared.get().getLeft(), highestPrepared.get().getRight()); 
             }
             return checkHighestPrepared;
         }
@@ -199,7 +199,11 @@ public class NodeService implements UDPService {
 
     public boolean justifyPrePrepare(int instance, int round) {
         System.out.println("Justify pre prepare");
-        return round == 1 || (roundChangeMessages.hasValidRoundChangeQuorum(config.getId(), instance, round) && justifyRoundChange(instance, round));
+        if (round == 1) {
+            return true;
+        }
+        Optional<Integer> validQuorum = roundChangeMessages.hasValidRoundChangeQuorum(config.getId(), instance, round);
+        return validQuorum.isPresent() && justifyRoundChange(instance, round, validQuorum.get());
     }
 
 
@@ -218,7 +222,8 @@ public class NodeService implements UDPService {
                 MessageFormat.format(
                         "{0} - Received ROUND-CHANGE message from {1} Consensus Instance {2}, Round {3}",
                         config.getId(), senderId, consensusInstance, round));
-        
+        RoundChangeMessage roundChangeMessage = message.deserializeRoundChangeMessage();
+        int preparedRound = roundChangeMessage.getPreparedRound();
         roundChangeMessages.addMessage(message);
         // If f+1 messages are received, update current round with the lowest round from the round change messages
         int minRound = roundChangeMessages.getRoundChangeMinRound(consensusInstance, currentRound, round);
@@ -227,7 +232,7 @@ public class NodeService implements UDPService {
             info.setCurrentRound(minRound);
             activateTimer(delay, info.getCurrentRound());
             link.broadcast(this.createRoundChange(consensusInstance, minRound, info.getPreparedRound(), info.getPreparedValue()));
-        } else if (justifyRoundChange(consensusInstance, round) && roundChangeMessages.hasValidRoundChangeQuorum(config.getId(), consensusInstance, round) && this.config.isLeader(round)) {
+        } else if (justifyRoundChange(consensusInstance, round, preparedRound) && roundChangeMessages.hasValidRoundChangeQuorum(config.getId(), consensusInstance, round).isPresent() && this.config.isLeader(round)) {
             updateAllLeader(round);
             String msg = MessageFormat.format("{0} - Node is leader, sending PRE-PREPARE message", config.getId());
             System.out.println(msg);
@@ -504,11 +509,12 @@ public class NodeService implements UDPService {
                             config.getId(), consensusInstance, round));
             return;
         }
-
+        
         Optional<String> commitValue = commitMessages.hasValidCommitQuorum(config.getId(),
                 consensusInstance, round);
-
+        System.out.println("before verification nodeId: " + config.getId());
         if (commitValue.isPresent() && instance.getCommittedRound() < round) {
+            System.out.println("after verification nodeId: " + config.getId());
             stopTimer();
             instance = this.instanceInfo.get(consensusInstance);
             instance.setCommittedRound(round);
@@ -525,6 +531,7 @@ public class NodeService implements UDPService {
                 }
                 
                 ledger.add(consensusInstance - 1, value);
+                System.out.println("nodeID " + config.getId() + "COMMITED VALUE: " + value);
                 
                 LOGGER.log(Level.INFO,
                     MessageFormat.format(
@@ -601,6 +608,10 @@ public class NodeService implements UDPService {
                     // if excpetion is a socket close, ignore (this was done for testing purposes)
                     if (!e.getMessage().equals("Socket closed")) {
                         e.printStackTrace();
+                    } else {
+                        // close current thread
+                        Thread.currentThread().interrupt();
+                        return;
                     }
                 }
             }).start();

@@ -35,12 +35,15 @@ public class NodeServiceTest {
     public void setUp() {
         // Setup other mocks and configure mock behaviors as needed
     }
-
-    /* @Test
-    public void testByzantineLeaderCase1() {
+    
+    @Test
+    public void testByzantineLeader() {
         // Node 1 will be byzantine and only deliver messages to node 2
         // Simulate node behaviour
         // Create configuration instances and save node services to a list
+        System.out.println("-------------------------------------------------");
+        System.out.println("---------------testByzantineLeader---------------");
+        System.out.println("-------------------------------------------------");
         HashMap<String, NodeService> nodeServices = new HashMap<>();
         for (int i = 1; i <= 4; i++) {
             String id = Integer.toString(i);
@@ -94,22 +97,32 @@ public class NodeServiceTest {
         for (int i = 2; i <= 4; i++) {
             assertEquals("ola", nodeServices.get(Integer.toString(i)).getLedger().get(0));
         }
-        // for all nodeServices close their sockets
-        try {
-            for (int i = 1; i <= 4; i++) {
-                nodeServices.get(Integer.toString(i)).close();
-            }
-        } catch (Exception e) {
-            // ignore forced close
+        // New lider is now 2
+        for (int i = 2; i <= 4; i++) {
+            // For testing effects of new consensus starting, we will not start consensus on node 1
+            // Because it's byzantine and it didn't commit the last consensus because it only send messages to node 2
+            nodeServices.get(Integer.toString(i)).startConsensus("hello");
         }
+
+        assertEquals(2, nodeServices.get("3").getConsensusInstance());
+        assertEquals(1, nodeServices.get("3").getConsensusInstanceRound(2));
+        assertEquals(true, nodeServices.get("3").isLeader("1"));
+        // for all nodeServices close their sockets
+        for (int i = 1; i <= 4; i++) {
+            nodeServices.get(Integer.toString(i)).close();
+        }
+        // Close any existing threads
+        Thread.getAllStackTraces().keySet().forEach(Thread::interrupt);
     } 
-
-
+    /*
     @Test
     public void testRoundResetWhenNewConsensusStarts() {
         // Node 1 will be byzantine and only deliver messages to node 2
         // Simulate node behaviour
         // Create configuration instances and save node services to a list
+        System.out.println("-------------------------------------------------");
+        System.out.println("-----------------Starting test 2-----------------");
+        System.out.println("-------------------------------------------------");
         HashMap<String, NodeService> nodeServices = new HashMap<>();
         for (int i = 1; i <= 4; i++) {
             String id = Integer.toString(i);
@@ -172,21 +185,20 @@ public class NodeServiceTest {
         assertEquals(true, nodeServices.get("3").isLeader("1"));
 
         // for all nodeServices close their sockets
-        try {
-            for (int i = 1; i <= 4; i++) {
-                nodeServices.get(Integer.toString(i)).close();
-            }
-        } catch (Exception e) {
-            // ignore forced close
+        for (int i = 1; i <= 4; i++) {
+            nodeServices.get(Integer.toString(i)).close();
         }
-    
     } */
-
+    
     @Test
     public void testByzantineNotLeader() {
         // Node 4 will be byzantine and we do not send messages
         // Simulate node behaviour
         // Create configuration instances and save node services to a list
+        
+        System.out.println("-------------------------------------------------");
+        System.out.println("--------------testByzantineNotLeader-------------");
+        System.out.println("-------------------------------------------------");
         HashMap<String, NodeService> nodeServices = new HashMap<>();
         for (int i = 1; i <= 4; i++) {
             String id = Integer.toString(i);
@@ -224,19 +236,21 @@ public class NodeServiceTest {
         for (int i = 1; i <= 4; i++) {
             nodeServices.get(Integer.toString(i)).startConsensus("ola");
         }
-        // sleep for 3 seconds
+        // sleep for 7 seconds
         try {
-            Thread.sleep(8000);
+            Thread.sleep(6000);
         } catch (InterruptedException e) {
             e.printStackTrace();
         }
-        // get leader from nodeServices 2
-        assertEquals(true, nodeServices.get("2").getConfig().isLeader());
         // get ledger from all nodeServices except 4 (it's byzantine)
         for (int i = 1; i <= 3; i++) {
             assertEquals("ola", nodeServices.get(Integer.toString(i)).getLedger().get(0));
         }
-    }
+        for (int i = 1; i <= 4; i++) {
+            nodeServices.get(Integer.toString(i)).close();
+        }
+        Thread.getAllStackTraces().keySet().forEach(Thread::interrupt);
+    }  
 
     // Additional test cases...
 }

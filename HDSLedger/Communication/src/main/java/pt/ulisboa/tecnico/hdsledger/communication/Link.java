@@ -361,7 +361,12 @@ public class Link {
     }
     // Close socket
     public void close() {
-        // Close socket in a way where it doesnt send a expction if someone is receiving from this socket
-        socket.close();
+        // Close socket in a way where it doesnt send a expection if someone is receiving from this socket
+        try {
+            socket.close();
+            socket.disconnect();
+        } catch (Exception e) {
+            // ignore
+        }
     }
 }

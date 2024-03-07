@@ -47,6 +47,8 @@ public class MessageBucket {
     public Optional<String> hasValidPrepareQuorum(String nodeId, int instance, int round) {
         // Create mapping of value to frequency
         HashMap<String, Integer> frequency = new HashMap<>();
+        // print how many instances are in the bucket and how many rounds are in the instance
+        System.out.println("Bucket size: " + bucket.size() + " instance size: " + bucket.get(instance).size());
         bucket.get(instance).get(round).values().forEach((message) -> {
             PrepareMessage prepareMessage = message.deserializePrepareMessage();
             String value = prepareMessage.getValue();
@@ -89,11 +91,23 @@ public class MessageBucket {
         });
     }
 
-    public Boolean hasValidRoundChangeQuorum(String nodeId, int instance, int round) {
+    public Optional<Integer> hasValidRoundChangeQuorum(String nodeId, int instance, int round) {
         // Check if the number of messages of the current instance from currentRound to Round is bigger than the quorum size
         System.out.println("Return has round change quorum size: " + bucket.get(instance).get(round).size() + " quorum size: " + quorumSize + " nodeId: " + nodeId + " round: " + round);
-        
-        return bucket.get(instance).get(round).size() >= quorumSize;
+        HashMap<Integer, Integer> frequency = new HashMap<>();
+        bucket.get(instance).get(round).values().forEach((message) -> {
+            RoundChangeMessage roundChangeMessage = message.deserializeRoundChangeMessage();
+            int preparedRound = roundChangeMessage.getPreparedRound();
+            frequency.put(preparedRound, frequency.getOrDefault(preparedRound, 0) + 1);
+        });
+
+        // Only one value (if any, thus the optional) will have a frequency
+        // greater than or equal to the quorum size
+        return frequency.entrySet().stream().filter((Map.Entry<Integer, Integer> entry) -> {
+            return entry.getValue() >= quorumSize;
+        }).map((Map.Entry<Integer, Integer> entry) -> {
+            return entry.getKey();
+        }).findFirst();
     }
 
     public Map<String, ConsensusMessage> getMessages(int instance, int round) {
