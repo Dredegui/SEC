@@ -11,7 +11,9 @@ import java.util.logging.Level;
 
 import org.junit.Before;
 import org.junit.Test;
+import org.junit.jupiter.api.Order;
 import org.junit.jupiter.api.parallel.Execution;
+import org.junit.jupiter.api.parallel.ExecutionMode;
 
 import pt.ulisboa.tecnico.hdsledger.communication.ConsensusMessage;
 import pt.ulisboa.tecnico.hdsledger.communication.Link;
@@ -20,6 +22,7 @@ import pt.ulisboa.tecnico.hdsledger.service.services.NodeService;
 import pt.ulisboa.tecnico.hdsledger.utilities.ProcessConfig;
 import pt.ulisboa.tecnico.hdsledger.utilities.ProcessConfigBuilder;
 
+@Execution(ExecutionMode.SAME_THREAD)
 public class NodeServiceTest {
 
     private NodeService nodeService;
@@ -32,7 +35,7 @@ public class NodeServiceTest {
     public void setUp() {
         // Setup other mocks and configure mock behaviors as needed
     }
-/*
+
     @Test
     public void testByzantineLeaderCase1() {
         // Node 1 will be byzantine and only deliver messages to node 2
@@ -90,8 +93,18 @@ public class NodeServiceTest {
         // get ledger from all nodeServices except 1 (it's byzantine)
         for (int i = 2; i <= 4; i++) {
             assertEquals("ola", nodeServices.get(Integer.toString(i)).getLedger().get(0));
-        }       
-    } */
+        }
+        // for all nodeServices close their sockets
+        try {
+            for (int i = 1; i <= 4; i++) {
+                nodeServices.get(Integer.toString(i)).close();
+            }
+        } catch (Exception e) {
+            // ignore forced close
+        }
+    } 
+
+
     @Test
     public void testRoundResetWhenNewConsensusStarts() {
         // Node 1 will be byzantine and only deliver messages to node 2
@@ -156,6 +169,7 @@ public class NodeServiceTest {
 
         assertEquals(2, nodeServices.get("3").getConsensusInstance());
         assertEquals(1, nodeServices.get("3").getConsensusInstanceRound(2));
+        assertEquals(true, nodeServices.get("3").isLeader("1"));
     
     }
 

@@ -113,7 +113,7 @@ public class NodeService implements UDPService {
         config.updateLeader(round);
     }
 
-    private boolean isLeader(String id) {
+    public boolean isLeader(String id) {
         System.out.println("ID: " + id + "Actual id: " + nodesConfig[Integer.parseInt(id) - 1].getId() + "Leader: " + nodesConfig[Integer.parseInt(id) - 1].isLeader());
         return nodesConfig[Integer.parseInt(id) - 1].isLeader();
     }
@@ -292,7 +292,7 @@ public class NodeService implements UDPService {
                 e.printStackTrace();
             }
         }
-        updateAllLeader(localConsensusInstance);
+        updateAllLeader(getConsensusInstanceRound(localConsensusInstance));
         InstanceInfo instance = this.instanceInfo.get(localConsensusInstance);
         // Leader broadcasts PRE-PREPARE message
         if (this.config.isLeader()) {
@@ -541,6 +541,11 @@ public class NodeService implements UDPService {
         }
     }
 
+    // Close link socket
+    public void close() {
+        link.close();
+    }
+
     @Override
     public void listen() {
         try {
@@ -593,7 +598,10 @@ public class NodeService implements UDPService {
                         }).start();
                     }
                 } catch (IOException | ClassNotFoundException e) {
-                    e.printStackTrace();
+                    // if excpetion is a socket close, ignore (this was done for testing purposes)
+                    if (!e.getMessage().equals("Socket closed")) {
+                        e.printStackTrace();
+                    }
                 }
             }).start();
         } catch (Exception e) {

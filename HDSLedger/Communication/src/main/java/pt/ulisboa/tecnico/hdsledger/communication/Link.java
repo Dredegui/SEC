@@ -359,4 +359,9 @@ public class Link {
         
         return message;
     }
+    // Close socket
+    public void close() {
+        // Close socket in a way where it doesnt send a expction if someone is receiving from this socket
+        socket.close();
+    }
 }
