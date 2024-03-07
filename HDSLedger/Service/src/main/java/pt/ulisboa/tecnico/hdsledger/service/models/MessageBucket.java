@@ -19,7 +19,7 @@ public class MessageBucket {
     private static final CustomLogger LOGGER = new CustomLogger(MessageBucket.class.getName());
     // Quorum size
     private final int quorumSize;
-    private final int f;
+    private int f;
     // Instance -> Round -> Sender ID -> Consensus message
     private final Map<Integer, Map<Integer, Map<String, ConsensusMessage>>> bucket = new ConcurrentHashMap<>();
 
@@ -89,42 +89,11 @@ public class MessageBucket {
         });
     }
 
-    public Optional<String> hasValidRoundChangeQuorum(String nodeId, int instance, int round) {
-        // Create mapping of value to frequency
-        HashMap<String, Integer> frequency = new HashMap<>();
-        bucket.get(instance).get(round).values().forEach((message) -> {
-            RoundChangeMessage roundChangeMessage = message.deserializeRoundChangeMessage();
-            String preparedValue = roundChangeMessage.getPreparedValue();
-            frequency.put(preparedValue, frequency.getOrDefault(preparedValue, 0) + 1);
-        });
-
-        // Only one value (if any, thus the optional) will have a frequency
-        // greater than or equal to the quorum size
-        return frequency.entrySet().stream().filter((Map.Entry<String, Integer> entry) -> {
-            return entry.getValue() >= quorumSize;
-        }).map((Map.Entry<String, Integer> entry) -> {
-            return entry.getKey();
-        }).findFirst();
-    }
-
-    public Optional<String> hasValidMoreThanFQuorum(String nodeId, int instance, int currentRound, int round) {
-        // Create mapping of value to frequency
-        HashMap<String, Integer> frequency = new HashMap<>();
-        // from currentRound not included to round count the number of messages with the same value
-        for (int i = currentRound + 1; i <= round; i++) {
-            bucket.get(instance).get(i).values().forEach((message) -> {
-                RoundChangeMessage roundChangeMessage = message.deserializeRoundChangeMessage();
-                String preparedValue = roundChangeMessage.getPreparedValue();
-                frequency.put(preparedValue, frequency.getOrDefault(preparedValue, 0) + 1);
-            });
-        }
-        // Only one value (if any, thus the optional) will have a frequency
-        // greater than or equal to the f+1 messages with at least one correct process
-        return frequency.entrySet().stream().filter((Map.Entry<String, Integer> entry) -> {
-            return entry.getValue() >= f+1;
-        }).map((Map.Entry<String, Integer> entry) -> {
-            return entry.getKey();
-        }).findFirst();
+    public Boolean hasValidRoundChangeQuorum(String nodeId, int instance, int round) {
+        // Check if the number of messages of the current instance from currentRound to Round is bigger than the quorum size
+        System.out.println("Return has round change quorum size: " + bucket.get(instance).get(round).size() + " quorum size: " + quorumSize + " nodeId: " + nodeId + " round: " + round);
+        
+        return bucket.get(instance).get(round).size() >= quorumSize;
     }
 
     public Map<String, ConsensusMessage> getMessages(int instance, int round) {
@@ -133,13 +102,17 @@ public class MessageBucket {
 
     public int getRoundChangeMinRound(int instance, int currentRound, int round) {
         int minRound = round;
-        for (int i = currentRound + 1; i <= round; i++) {
-            if (bucket.get(instance).containsKey(i)) {
-                minRound = i;
-                break;
+        if (bucket.get(instance).get(round).size() >= f+1 && round > currentRound) {
+            for (int i = currentRound + 1; i <= round; i++) {
+                if (bucket.get(instance).containsKey(i)) {
+                    minRound = i;
+                    break;
+                }
             }
+            return minRound;
+        } else {
+            return -1;
         }
-        return minRound;
     }
 
     // Helper function that returns a tuple (pr, pv) where pr and pv are, respectively, the prepared round and the prepared value of the ROUND-CHANGE message in Qrc with the highest prepared round
