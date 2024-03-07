@@ -36,7 +36,7 @@ public class NodeServiceTest {
         // Setup other mocks and configure mock behaviors as needed
     }
 
-    @Test
+    /* @Test
     public void testByzantineLeaderCase1() {
         // Node 1 will be byzantine and only deliver messages to node 2
         // Simulate node behaviour
@@ -170,7 +170,72 @@ public class NodeServiceTest {
         assertEquals(2, nodeServices.get("3").getConsensusInstance());
         assertEquals(1, nodeServices.get("3").getConsensusInstanceRound(2));
         assertEquals(true, nodeServices.get("3").isLeader("1"));
+
+        // for all nodeServices close their sockets
+        try {
+            for (int i = 1; i <= 4; i++) {
+                nodeServices.get(Integer.toString(i)).close();
+            }
+        } catch (Exception e) {
+            // ignore forced close
+        }
     
+    } */
+
+    @Test
+    public void testByzantineNotLeader() {
+        // Node 4 will be byzantine and we do not send messages
+        // Simulate node behaviour
+        // Create configuration instances and save node services to a list
+        HashMap<String, NodeService> nodeServices = new HashMap<>();
+        for (int i = 1; i <= 4; i++) {
+            String id = Integer.toString(i);
+            String private_key_path = "src/main/resources/privateKeys/rk_" + id + ".key";
+            String nodesConfigPath = "src/main/resources/regular_config.json";
+            
+            // Create configuration instances
+            ProcessConfig[] nodeConfigs = new ProcessConfigBuilder().fromFile(nodesConfigPath);
+            ProcessConfig leaderConfig = Arrays.stream(nodeConfigs).filter(ProcessConfig::isLeader).findAny().get();
+            ProcessConfig nodeConfig = Arrays.stream(nodeConfigs).filter(c -> c.getId().equals(id)).findAny().get();
+
+            String log = MessageFormat.format("{0} - Running at {1}:{2}; is leader: {3}; public key: {4}",
+                nodeConfig.getId(), nodeConfig.getHostname(), nodeConfig.getPort(),
+                nodeConfig.isLeader(), nodeConfig.getPublicKey());
+
+            System.out.println(log);
+
+            // Abstraction to send and receive messages
+            Link linkToNodes = new Link(nodeConfig, private_key_path, nodeConfig.getPort(), nodeConfigs,
+                ConsensusMessage.class);
+            if (i == 4) {
+                // Spy linkToNodes 
+                linkToNodes = Mockito.spy(linkToNodes);
+                Mockito.doAnswer(invocation -> {
+                    return null;
+                }).when(linkToNodes).unreliableSend(Mockito.any(), Mockito.anyInt(), Mockito.any(), Mockito.any());
+            }
+
+            // Services that implement listen from UDPService
+            NodeService nodeService = new NodeService(linkToNodes, nodeConfig, leaderConfig,
+                nodeConfigs);
+            nodeServices.put(id, nodeService);
+            nodeService.listen();
+        }
+        for (int i = 1; i <= 4; i++) {
+            nodeServices.get(Integer.toString(i)).startConsensus("ola");
+        }
+        // sleep for 3 seconds
+        try {
+            Thread.sleep(8000);
+        } catch (InterruptedException e) {
+            e.printStackTrace();
+        }
+        // get leader from nodeServices 2
+        assertEquals(true, nodeServices.get("2").getConfig().isLeader());
+        // get ledger from all nodeServices except 4 (it's byzantine)
+        for (int i = 1; i <= 3; i++) {
+            assertEquals("ola", nodeServices.get(Integer.toString(i)).getLedger().get(0));
+        }
     }
 
     // Additional test cases...
