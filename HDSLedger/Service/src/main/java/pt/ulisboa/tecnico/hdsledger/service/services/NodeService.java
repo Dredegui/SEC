@@ -76,10 +76,16 @@ public class NodeService implements UDPService {
         this.config = config;
         this.leaderConfig = leaderConfig;
         this.nodesConfig = nodesConfig;
-
-        this.prepareMessages = new MessageBucket(nodesConfig.length);
-        this.commitMessages = new MessageBucket(nodesConfig.length);
-        this.roundChangeMessages = new MessageBucket(nodesConfig.length);
+        // count number of nodes that aren't client by checking if string client is in node.getId
+        int nodeCount = 0;
+        for (int i = 0; i < nodesConfig.length; i++) {
+            if (!nodesConfig[i].getId().contains("client")) {
+                nodeCount++;
+            }
+        }
+        this.prepareMessages = new MessageBucket(nodeCount);
+        this.commitMessages = new MessageBucket(nodeCount);
+        this.roundChangeMessages = new MessageBucket(nodeCount);
 
         this.timer = new Timer();
     }
@@ -96,8 +102,15 @@ public class NodeService implements UDPService {
         return this.ledger;
     }
 
+    private void updateAllLeader(int round) {
+        for (int i = 1; i <= nodesConfig.length; i++) {
+            nodesConfig[i - 1].updateLeader(round);
+        }
+    }
+
     private boolean isLeader(String id) {
-        return this.leaderConfig.getId().equals(id);
+        System.out.println("ID: " + id + "Actual id: " + nodesConfig[Integer.parseInt(id) - 1].getId() + "Leader: " + nodesConfig[Integer.parseInt(id) - 1].isLeader());
+        return nodesConfig[Integer.parseInt(id) - 1].isLeader();
     }
  
     public ConsensusMessage createConsensusMessage(String value, int instance, int round) {
@@ -150,6 +163,9 @@ public class NodeService implements UDPService {
         activateTimer(delay, info.getCurrentRound());
         
         // Broadcast (ROUND-CHANGE, λ, r, pr, pv)
+        String msg = MessageFormat.format("{0} - Broadcasting ROUND-CHANGE message for Consensus Instance {1}, Round {2}, Prepared Round {3}, Prepared Value {4}",
+                config.getId(), this.consensusInstance.get(), info.getCurrentRound(), info.getPreparedRound(), info.getPreparedValue());
+        System.out.println(msg);
         ConsensusMessage roundChangeMessage = this.createRoundChange(this.consensusInstance.get(), info.getCurrentRound(), info.getPreparedRound(), info.getPreparedValue());
         this.link.broadcast(roundChangeMessage);
     }
@@ -163,18 +179,22 @@ public class NodeService implements UDPService {
 
     public boolean justifyRoundChange(int instance, int round) { 
         boolean everyNull =  roundChangeMessages.allNullRoundChange(instance, round);
-        Optional<String> validQuorum = prepareMessages.hasValidPrepareQuorum(null, instance, round);
-        Optional<Pair<Integer, String>> highestPrepared = roundChangeMessages.getHighestPreparedRound(instance, round);
-        boolean checkHighestPrepared = false;
-        if (validQuorum.isPresent() && highestPrepared.isPresent()) {
-            // check if every (pr, pv) pair from each prepare messages is equal to (pr, pv) from the highest prepared round
-            checkHighestPrepared = prepareMessages.checkHighestPrepared(instance, round, highestPrepared.get().getLeft(), highestPrepared.get().getRight()); 
+        if (!everyNull) {
+            Optional<String> validQuorum = prepareMessages.hasValidPrepareQuorum(null, instance, round);
+            Optional<Pair<Integer, String>> highestPrepared = roundChangeMessages.getHighestPreparedRound(instance, round);
+            boolean checkHighestPrepared = false;
+            if (validQuorum.isPresent() && highestPrepared.isPresent()) {
+                // check if every (pr, pv) pair from each prepare messages is equal to (pr, pv) from the highest prepared round
+                checkHighestPrepared = prepareMessages.checkHighestPrepared(instance, round, highestPrepared.get().getLeft(), highestPrepared.get().getRight()); 
+            }
+            return checkHighestPrepared;
         }
-        return everyNull || checkHighestPrepared;
+        return everyNull;
     }
 
     public boolean justifyPrePrepare(int instance, int round) {
-        return round == 1 || (roundChangeMessages.hasValidRoundChangeQuorum(null, instance, round).isPresent() && justifyRoundChange(instance, round));
+        System.out.println("Justify pre prepare");
+        return round == 1 || (roundChangeMessages.hasValidRoundChangeQuorum(config.getId(), instance, round) && justifyRoundChange(instance, round));
     }
 
 
@@ -185,7 +205,10 @@ public class NodeService implements UDPService {
         int round = message.getRound();
         int currentRound = info.getCurrentRound();
         String senderId = message.getSenderId();
-
+        String msg1 = MessageFormat.format(
+            "{0} - Received ROUND-CHANGE message from {1} Consensus Instance {2}, Round {3}",
+            config.getId(), senderId, consensusInstance, round);
+        System.out.println(msg1);
         LOGGER.log(Level.INFO,
                 MessageFormat.format(
                         "{0} - Received ROUND-CHANGE message from {1} Consensus Instance {2}, Round {3}",
@@ -193,16 +216,16 @@ public class NodeService implements UDPService {
         
         roundChangeMessages.addMessage(message);
         // If f+1 messages are received, update current round with the lowest round from the round change messages
-        Optional<String> moreThanFQuorum = roundChangeMessages.hasValidMoreThanFQuorum(config.getId(), consensusInstance, currentRound, round);
-        Optional<String> quorum = roundChangeMessages.hasValidRoundChangeQuorum(config.getId(), consensusInstance, round);
-        if (moreThanFQuorum.isPresent() && currentRound < round) {
+        int minRound = roundChangeMessages.getRoundChangeMinRound(consensusInstance, currentRound, round);
+        if (minRound != -1 && currentRound < round) {
             // valors = funcao obter min
-            int minRound = roundChangeMessages.getRoundChangeMinRound(consensusInstance, currentRound, round);
             info.setCurrentRound(minRound);
             activateTimer(delay, info.getCurrentRound());
             link.broadcast(this.createRoundChange(consensusInstance, minRound, info.getPreparedRound(), info.getPreparedValue()));
-        } else if (quorum.isPresent() && this.config.isLeader(round) && justifyRoundChange(consensusInstance, round)) {
-            this.config.updateLeader(round);
+        } else if (justifyRoundChange(consensusInstance, round) && roundChangeMessages.hasValidRoundChangeQuorum(config.getId(), consensusInstance, round) && this.config.isLeader(round)) {
+            updateAllLeader(round);
+            String msg = MessageFormat.format("{0} - Node is leader, sending PRE-PREPARE message", config.getId());
+            System.out.println(msg);
             Optional<Pair<Integer, String>> highestPrepared = roundChangeMessages.getHighestPreparedRound(consensusInstance, round);
             String value = null;
             if (highestPrepared.isPresent()) {
@@ -310,17 +333,23 @@ public class NodeService implements UDPService {
         PrePrepareMessage prePrepareMessage = message.deserializePrePrepareMessage();
 
         String value = prePrepareMessage.getValue();
-
+        int currentRound = this.instanceInfo.get(consensusInstance).getCurrentRound();
+        String msg = MessageFormat.format(
+            "{0} - Received PRE-PREPARE message from {1} Consensus Instance {2}, Round {3}, Current Round {4}",
+            config.getId(), senderId, consensusInstance, round, currentRound);
+        System.out.println(msg);
         LOGGER.log(Level.INFO,
                 MessageFormat.format(
                         "{0} - Received PRE-PREPARE message from {1} Consensus Instance {2}, Round {3}",
                         config.getId(), senderId, consensusInstance, round));
-        this.config.updateLeader(round);
+        
+        updateAllLeader(currentRound);
         // Verify if pre-prepare was sent by leader
-        if (!isLeader(senderId))
+        if (!isLeader(senderId)) {
+            System.out.println("Lider puta que pariu");
             return;
+        }
         if (justifyPrePrepare(consensusInstance, round)) {
-            
             // Set instance value
             this.instanceInfo.putIfAbsent(consensusInstance, new InstanceInfo(value));
 
@@ -368,7 +397,10 @@ public class NodeService implements UDPService {
                 MessageFormat.format(
                         "{0} - Received PREPARE message from {1}: Consensus Instance {2}, Round {3}",
                         config.getId(), senderId, consensusInstance, round));
-
+        String msg = MessageFormat.format(
+            "{0} - Received PREPARE message from {1}: Consensus Instance {2}, Round {3}",
+            config.getId(), senderId, consensusInstance, round);
+        System.out.println(msg);
         // Doesn't add duplicate messages
         prepareMessages.addMessage(message);
 
@@ -437,7 +469,9 @@ public class NodeService implements UDPService {
 
         int consensusInstance = message.getConsensusInstance();
         int round = message.getRound();
-
+        String msg = MessageFormat.format("{0} - Received COMMIT message from {1}: Consensus Instance {2}, Round {3}",
+                config.getId(), message.getSenderId(), consensusInstance, round);
+        System.out.println(msg);
         LOGGER.log(Level.INFO,
                 MessageFormat.format("{0} - Received COMMIT message from {1}: Consensus Instance {2}, Round {3}",
                         config.getId(), message.getSenderId(), consensusInstance, round));
