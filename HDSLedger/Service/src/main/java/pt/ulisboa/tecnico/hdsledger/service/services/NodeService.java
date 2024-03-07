@@ -98,6 +98,10 @@ public class NodeService implements UDPService {
         return this.consensusInstance.get();
     }
 
+    public int getConsensusInstanceRound(int instance) {
+        return this.instanceInfo.get(instance).getCurrentRound();
+    }
+
     public ArrayList<String> getLedger() {
         return this.ledger;
     }
@@ -106,6 +110,7 @@ public class NodeService implements UDPService {
         for (int i = 1; i <= nodesConfig.length; i++) {
             nodesConfig[i - 1].updateLeader(round);
         }
+        config.updateLeader(round);
     }
 
     private boolean isLeader(String id) {
@@ -268,14 +273,16 @@ public class NodeService implements UDPService {
         // Set initial consensus values
         int localConsensusInstance = this.consensusInstance.incrementAndGet();
         InstanceInfo existingConsensus = this.instanceInfo.put(localConsensusInstance, new InstanceInfo(value));
-
+        String msg = MessageFormat.format("{0} - Starting consensus for instance {1} with value {2}",
+                config.getId(), localConsensusInstance, value);
+        System.out.println(msg);
         // If startConsensus was already called for a given round
         if (existingConsensus != null) {
             LOGGER.log(Level.INFO, MessageFormat.format("{0} - Node already started consensus for instance {1}",
                     config.getId(), localConsensusInstance));
             return;
         }
-
+        
         // Only start a consensus instance if the last one was decided
         // We need to be sure that the previous value has been decided
         while (lastDecidedConsensusInstance.get() < localConsensusInstance - 1) {
@@ -285,7 +292,7 @@ public class NodeService implements UDPService {
                 e.printStackTrace();
             }
         }
-
+        updateAllLeader(localConsensusInstance);
         InstanceInfo instance = this.instanceInfo.get(localConsensusInstance);
         // Leader broadcasts PRE-PREPARE message
         if (this.config.isLeader()) {
@@ -526,7 +533,7 @@ public class NodeService implements UDPService {
             }
 
             lastDecidedConsensusInstance.getAndIncrement();
-
+            System.out.println("Last decided consensus instance: " + lastDecidedConsensusInstance.get() + "NodeID: " + config.getId());
             LOGGER.log(Level.INFO,
                     MessageFormat.format(
                             "{0} - Decided on Consensus Instance {1}, Round {2}, Successful? {3}",
