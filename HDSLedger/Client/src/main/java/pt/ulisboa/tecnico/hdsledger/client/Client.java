@@ -13,17 +13,16 @@ public class Client {
 
     private static String nodesConfigPath = "src/main/resources/regular_config.json";
     private static String private_key_path = "src/main/resources/";
-    
+
     private ClientService clientService;
 
     public Client(ClientService clientService) {
         this.clientService = clientService;
+        
     }
     
     private void appendMessage(String message) {
         clientService.append(message);
-
-        System.out.println("Message appended to the chain successfully.");
     }
 
     public void cli() {
