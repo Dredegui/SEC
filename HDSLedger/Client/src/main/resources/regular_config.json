@@ -32,5 +32,11 @@
         "hostname": "localhost",
         "port": 3005,
         "publicKey": "src/main/resources/publicKeys/clientPublic.key"
-    }    
+    },
+    {
+        "id": "client1",
+        "hostname": "localhost",
+        "port": 3006,
+        "publicKey": "src/main/resources/publicKeys/client1Public.key"
+    }     
 ]

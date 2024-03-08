@@ -18,9 +18,9 @@ public class ClientService {
         this.link = link;
     }
 
-    public void append(String data) {
+    public void append(String data, String id) {
 
-        ConsensusMessage consensusMessage = new ConsensusMessage("client", Message.Type.APPEND);
+        ConsensusMessage consensusMessage = new ConsensusMessage(id, Message.Type.APPEND);
 
         consensusMessage.setMessage(new AppendMessage(data).toJson());
 

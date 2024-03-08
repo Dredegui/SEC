@@ -21,11 +21,11 @@ public class Client {
         
     }
     
-    private void appendMessage(String message) {
-        clientService.append(message);
+    private void appendMessage(String message, String id) {
+        clientService.append(message, id);
     }
 
-    public void cli() {
+    public void cli(String id) {
             Scanner scanner = new Scanner(System.in);
             boolean running = true;
     
@@ -41,7 +41,7 @@ public class Client {
                     case 1:
                         System.out.print("Enter the message to append to the chain: ");
                         String message = scanner.nextLine();
-                        appendMessage(message);
+                        appendMessage(message,id);
                         break;
                     case 2:
                         running = false;
@@ -73,6 +73,6 @@ public class Client {
         Client client = new Client(clientService);
 
         // Start CLI
-        client.cli();
+        client.cli(id);
     }
 }
