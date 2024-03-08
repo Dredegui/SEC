@@ -1,6 +1,7 @@
 package pt.ulisboa.tecnico.hdsledger.service.services;
 
 import java.io.IOException;
+import java.sql.Time;
 import java.text.MessageFormat;
 import java.util.ArrayList;
 import java.util.Collection;
@@ -17,6 +18,7 @@ import java.util.TimerTask;
 
 import pt.ulisboa.tecnico.hdsledger.communication.AppendMessage;
 import pt.ulisboa.tecnico.hdsledger.communication.CommitMessage;
+import pt.ulisboa.tecnico.hdsledger.communication.ConfirmationMessage;
 import pt.ulisboa.tecnico.hdsledger.communication.ConsensusMessage;
 import pt.ulisboa.tecnico.hdsledger.communication.Link;
 import pt.ulisboa.tecnico.hdsledger.communication.Message;
@@ -167,7 +169,6 @@ public class NodeService implements UDPService {
         activateTimer(delay, info.getCurrentRound());
         
         // Broadcast (ROUND-CHANGE, λ, r, pr, pv)
-        // Use to see results in the tests
         String msg = MessageFormat.format("{0} - Broadcasting ROUND-CHANGE message for Consensus Instance {1}, Round {2}, Prepared Round {3}, Prepared Value {4}",
                 config.getId(), this.consensusInstance.get(), info.getCurrentRound(), info.getPreparedRound(), info.getPreparedValue());
         System.out.println(msg);
@@ -214,7 +215,6 @@ public class NodeService implements UDPService {
         int round = message.getRound();
         int currentRound = info.getCurrentRound();
         String senderId = message.getSenderId();
-        // Use to see results in the tests
         String msg1 = MessageFormat.format(
             "{0} - Received ROUND-CHANGE message from {1} Consensus Instance {2}, Round {3}",
             config.getId(), senderId, consensusInstance, round);
@@ -273,8 +273,9 @@ public class NodeService implements UDPService {
      * the remaining nodes only update values.
      *
      * @param inputValue Value to value agreed upon
+     * @param clientId client that started the consensus
      */
-    public void startConsensus(String value) {
+    public void startConsensus(String value, String clientId) {
 
         // Set initial consensus values
         int localConsensusInstance = this.consensusInstance.incrementAndGet();
@@ -300,6 +301,7 @@ public class NodeService implements UDPService {
         }
         updateAllLeader(getConsensusInstanceRound(localConsensusInstance));
         InstanceInfo instance = this.instanceInfo.get(localConsensusInstance);
+        instance.setSenderId(clientId);
         // Leader broadcasts PRE-PREPARE message
         if (this.config.isLeader()) {
             LOGGER.log(Level.INFO,
@@ -326,7 +328,7 @@ public class NodeService implements UDPService {
         String value = appendMessage.getValue();
         LOGGER.log(Level.INFO, MessageFormat.format("{0} - Received APPEND message: {1}", config.getId(), value));
         
-        startConsensus(value);
+        startConsensus(value, message.getSenderId());
     }
 
     
@@ -347,7 +349,6 @@ public class NodeService implements UDPService {
 
         String value = prePrepareMessage.getValue();
         int currentRound = this.instanceInfo.get(consensusInstance).getCurrentRound();
-        // Use to see results in the tests
         String msg = MessageFormat.format(
             "{0} - Received PRE-PREPARE message from {1} Consensus Instance {2}, Round {3}, Current Round {4}",
             config.getId(), senderId, consensusInstance, round, currentRound);
@@ -360,6 +361,7 @@ public class NodeService implements UDPService {
         updateAllLeader(currentRound);
         // Verify if pre-prepare was sent by leader
         if (!isLeader(senderId)) {
+            System.out.println("Lider puta que pariu");
             return;
         }
         if (justifyPrePrepare(consensusInstance, round)) {
@@ -410,7 +412,6 @@ public class NodeService implements UDPService {
                 MessageFormat.format(
                         "{0} - Received PREPARE message from {1}: Consensus Instance {2}, Round {3}",
                         config.getId(), senderId, consensusInstance, round));
-        // Use to see results in the tests
         String msg = MessageFormat.format(
             "{0} - Received PREPARE message from {1}: Consensus Instance {2}, Round {3}",
             config.getId(), senderId, consensusInstance, round);
@@ -483,7 +484,6 @@ public class NodeService implements UDPService {
 
         int consensusInstance = message.getConsensusInstance();
         int round = message.getRound();
-        // Use to see results in the tests
         String msg = MessageFormat.format("{0} - Received COMMIT message from {1}: Consensus Instance {2}, Round {3}",
                 config.getId(), message.getSenderId(), consensusInstance, round);
         System.out.println(msg);
@@ -532,13 +532,18 @@ public class NodeService implements UDPService {
                 while (ledger.size() < consensusInstance - 1) {
                     ledger.add("");
                 }
-                
+            
                 ledger.add(consensusInstance - 1, value);
                 System.out.println("nodeID " + config.getId() + "COMMITED VALUE: " + value);
-                
-                // If the node is the leader, send the value to the client
-                
 
+                // Apenas o lider é que envia a confirmation 
+                if(this.config.isLeader()){
+        
+                    // Send to client confirmation message of the appended value to the ledger
+                    this.link.send(instance.getSenderId(), new ConsensusMessageBuilder(this.config.getId(),Message.Type.CONFIRMATION)
+                            .setMessage(new ConfirmationMessage(consensusInstance-1).toJson())
+                            .build());
+                }
                 
                 LOGGER.log(Level.INFO,
                     MessageFormat.format(
@@ -583,7 +588,6 @@ public class NodeService implements UDPService {
 
                                 case PRE_PREPARE ->
                                     uponPrePrepare((ConsensusMessage) message);
-
 
                                 case PREPARE ->
                                     uponPrepare((ConsensusMessage) message);
