@@ -361,7 +361,6 @@ public class NodeService implements UDPService {
         updateAllLeader(currentRound);
         // Verify if pre-prepare was sent by leader
         if (!isLeader(senderId)) {
-            System.out.println("Lider puta que pariu");
             return;
         }
         if (justifyPrePrepare(consensusInstance, round)) {
