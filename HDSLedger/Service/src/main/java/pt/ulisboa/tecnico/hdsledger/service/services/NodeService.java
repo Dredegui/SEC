@@ -532,7 +532,10 @@ public class NodeService implements UDPService {
                 while (ledger.size() < consensusInstance - 1) {
                     ledger.add("");
                 }
-                
+            
+                ledger.add(consensusInstance - 1, value);
+                System.out.println("nodeID " + config.getId() + "COMMITED VALUE: " + value);
+
                 // Apenas o lider é que envia a confirmation 
                 if(this.config.isLeader()){
         
@@ -541,9 +544,6 @@ public class NodeService implements UDPService {
                             .setMessage(new ConfirmationMessage(consensusInstance-1).toJson())
                             .build());
                 }
-
-                ledger.add(consensusInstance - 1, value);
-                System.out.println("nodeID " + config.getId() + "COMMITED VALUE: " + value);
                 
                 LOGGER.log(Level.INFO,
                     MessageFormat.format(
@@ -588,7 +588,6 @@ public class NodeService implements UDPService {
 
                                 case PRE_PREPARE ->
                                     uponPrePrepare((ConsensusMessage) message);
-
 
                                 case PREPARE ->
                                     uponPrepare((ConsensusMessage) message);
