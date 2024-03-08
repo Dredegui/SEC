@@ -11,9 +11,18 @@ public class InstanceInfo {
     private CommitMessage commitMessage;
     private String inputValue;
     private int committedRound = -1;
+    private String senderId = null;
 
     public InstanceInfo(String inputValue) {
         this.inputValue = inputValue;
+    }
+
+    public String getSenderId() {
+        return this.senderId;
+    }
+
+    public void setSenderId(String senderId) {
+        this.senderId = senderId;
     }
 
     public int getCurrentRound() {

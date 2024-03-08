@@ -83,7 +83,7 @@ public class NodeServiceTest {
             nodeService.listen();
         }
         for (int i = 1; i <= 4; i++) {
-            nodeServices.get(Integer.toString(i)).startConsensus("ola");
+            nodeServices.get(Integer.toString(i)).startConsensus("ola","client");
         }
         // sleep for 3 seconds
         try {
@@ -101,7 +101,7 @@ public class NodeServiceTest {
         for (int i = 2; i <= 4; i++) {
             // For testing effects of new consensus starting, we will not start consensus on node 1
             // Because it's byzantine and it didn't commit the last consensus because it only send messages to node 2
-            nodeServices.get(Integer.toString(i)).startConsensus("hello");
+            nodeServices.get(Integer.toString(i)).startConsensus("hello", "client");
         }
 
         assertEquals(2, nodeServices.get("3").getConsensusInstance());
@@ -234,7 +234,7 @@ public class NodeServiceTest {
             nodeService.listen();
         }
         for (int i = 1; i <= 4; i++) {
-            nodeServices.get(Integer.toString(i)).startConsensus("ola");
+            nodeServices.get(Integer.toString(i)).startConsensus("ola","client");
         }
         // sleep for 7 seconds
         try {
@@ -254,3 +254,4 @@ public class NodeServiceTest {
 
     // Additional test cases...
 }
+

@@ -18,6 +18,7 @@ import java.util.TimerTask;
 
 import pt.ulisboa.tecnico.hdsledger.communication.AppendMessage;
 import pt.ulisboa.tecnico.hdsledger.communication.CommitMessage;
+import pt.ulisboa.tecnico.hdsledger.communication.ConfirmationMessage;
 import pt.ulisboa.tecnico.hdsledger.communication.ConsensusMessage;
 import pt.ulisboa.tecnico.hdsledger.communication.Link;
 import pt.ulisboa.tecnico.hdsledger.communication.Message;
@@ -272,8 +273,9 @@ public class NodeService implements UDPService {
      * the remaining nodes only update values.
      *
      * @param inputValue Value to value agreed upon
+     * @param clientId client that started the consensus
      */
-    public void startConsensus(String value) {
+    public void startConsensus(String value, String clientId) {
 
         // Set initial consensus values
         int localConsensusInstance = this.consensusInstance.incrementAndGet();
@@ -299,6 +301,7 @@ public class NodeService implements UDPService {
         }
         updateAllLeader(getConsensusInstanceRound(localConsensusInstance));
         InstanceInfo instance = this.instanceInfo.get(localConsensusInstance);
+        instance.setSenderId(clientId);
         // Leader broadcasts PRE-PREPARE message
         if (this.config.isLeader()) {
             LOGGER.log(Level.INFO,
@@ -325,7 +328,7 @@ public class NodeService implements UDPService {
         String value = appendMessage.getValue();
         LOGGER.log(Level.INFO, MessageFormat.format("{0} - Received APPEND message: {1}", config.getId(), value));
         
-        startConsensus(value);
+        startConsensus(value, message.getSenderId());
     }
 
     
@@ -530,6 +533,15 @@ public class NodeService implements UDPService {
                     ledger.add("");
                 }
                 
+                // Apenas o lider é que envia a confirmation 
+                if(this.config.isLeader()){
+        
+                    // Send to client confirmation message of the appended value to the ledger
+                    this.link.send(instance.getSenderId(), new ConsensusMessageBuilder(this.config.getId(),Message.Type.CONFIRMATION)
+                            .setMessage(new ConfirmationMessage(consensusInstance-1).toJson())
+                            .build());
+                }
+
                 ledger.add(consensusInstance - 1, value);
                 System.out.println("nodeID " + config.getId() + "COMMITED VALUE: " + value);
                 
