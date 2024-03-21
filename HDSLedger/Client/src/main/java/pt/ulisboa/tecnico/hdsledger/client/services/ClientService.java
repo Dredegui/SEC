@@ -1,6 +1,7 @@
 package pt.ulisboa.tecnico.hdsledger.client.services;
 
 import java.io.IOException;
+import java.security.SecureRandom;
 
 import com.google.gson.Gson;
 import pt.ulisboa.tecnico.hdsledger.communication.AppendMessage;
@@ -13,16 +14,22 @@ import pt.ulisboa.tecnico.hdsledger.communication.Link;
 public class ClientService {
 
     private Link link;
+    private static SecureRandom random;
 
     public ClientService(Link link) {
         this.link = link;
+        try {
+            random = SecureRandom.getInstance("SHA1PRNG");
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
     }
 
     public void append(String data, String id) {
 
         ConsensusMessage consensusMessage = new ConsensusMessage(id, Message.Type.APPEND);
 
-        consensusMessage.setMessage(new AppendMessage(data).toJson());
+        consensusMessage.setMessage(new AppendMessage(data, random.nextInt()).toJson());
 
         this.link.broadcast(consensusMessage);
 
