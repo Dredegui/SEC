@@ -41,6 +41,8 @@ public class Link {
     private final DatagramSocket socket;
     // Map of all nodes in the network
     private final Map<String, ProcessConfig> nodes = new ConcurrentHashMap<>();
+    // Map of all clients in the network
+    private final Map<String, ProcessConfig> clients = new ConcurrentHashMap<>();
     // Reference to the node itself
     private final ProcessConfig config;
     // Private Key Path
@@ -70,7 +72,12 @@ public class Link {
 
         Arrays.stream(nodes).forEach(node -> {
             String id = node.getId();
-            this.nodes.put(id, node);
+            if (id.contains("client")) {
+                this.clients.put(id, node);
+            }
+            else {
+                this.nodes.put(id, node);
+            }
             receivedMessages.put(id, new CollapsingSet());
         });
 
@@ -136,8 +143,11 @@ public class Link {
 
     // inverse of the sign function aka validate
     public boolean validate(String nodeId, byte[] data, byte[] signature) {
+        ProcessConfig sender = nodes.get(nodeId);
+        if (sender == null)
+            sender = clients.get(nodeId);
         // Other node public key
-        String publicKey = nodes.get(nodeId).getPublicKey();
+        String publicKey = sender.getPublicKey();
         //extract public key from .key file
         PublicKey pubKey = getPublicKey(publicKey);
         // validate signature
@@ -180,6 +190,8 @@ public class Link {
         new Thread(() -> {
             try {
                 ProcessConfig node = nodes.get(nodeId);
+                if (node == null)
+                    node = clients.get(nodeId);
                 if (node == null)
                     throw new HDSSException(ErrorMessage.NoSuchNode);
 
@@ -294,7 +306,7 @@ public class Link {
         String senderId = message.getSenderId();
         int messageId = message.getMessageId();
 
-        if (!nodes.containsKey(senderId))
+        if (!nodes.containsKey(senderId) && !clients.containsKey(senderId))
             throw new HDSSException(ErrorMessage.NoSuchNode);
 
         // Handle ACKS, since it's possible to receive multiple acks from the same
@@ -316,8 +328,8 @@ public class Link {
         }
 
         switch (message.getType()) {
-            case APPEND -> {
-                return message;
+            case APPEND -> { // Client -> Server -> Client
+                //return message;
             }
             case PRE_PREPARE -> {
                 return message;
@@ -354,6 +366,7 @@ public class Link {
             // we're assuming an eventually synchronous network
             // Even if a node receives the message multiple times,
             // it will discard duplicates
+
             unreliableSend(address, port, responseMessage, signature);
         }
         

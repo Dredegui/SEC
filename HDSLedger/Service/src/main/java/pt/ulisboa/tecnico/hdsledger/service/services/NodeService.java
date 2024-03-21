@@ -525,7 +525,9 @@ public class NodeService implements UDPService {
 
             // Append value to the ledger (must be synchronized to be thread-safe)
             synchronized(ledger) {
-
+                if (ledger.size() < consensusInstance - 1) {
+                    return;
+                }
                 // Increment size of ledger to accommodate current instance
                 ledger.ensureCapacity(consensusInstance);
                 while (ledger.size() < consensusInstance - 1) {
