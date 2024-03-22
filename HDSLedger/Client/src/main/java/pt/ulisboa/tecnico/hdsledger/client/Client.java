@@ -25,6 +25,15 @@ public class Client {
         clientService.append(message, id);
     }
 
+    private void check_balance(String id){
+        clientService.check_balance(id);
+    }
+
+    private void transfer(String destinationId, int amount) {
+        System.out.println("Transfering " + amount + " to " + destinationId);
+        //clientService.transfer(destinationId,amount);
+    }
+
     public void cli(String id) {
             Scanner scanner = new Scanner(System.in);
             boolean running = true;
@@ -32,7 +41,9 @@ public class Client {
             while (running) {
                 System.out.println("Choose an option:");
                 System.out.println("1. Append message to the chain");
-                System.out.println("2. Exit");
+                System.out.println("2. Check account balance");
+                System.out.println("3. Transfer funds");
+                System.out.println("5. Exit");
     
                 int choice = scanner.nextInt();
                 scanner.nextLine();
@@ -44,6 +55,16 @@ public class Client {
                         appendMessage(message,id);
                         break;
                     case 2:
+                        check_balance(id);
+                        break;
+                    case 3:
+                        System.out.print("Enter the destination: ");
+                        String destinationId = scanner.nextLine();
+                        System.out.print("Enter the amount to transfer: ");
+                        int amount = scanner.nextInt();
+                        transfer(destinationId,amount);
+                        break;
+                    case 5:
                         running = false;
                         break;
                     default:
