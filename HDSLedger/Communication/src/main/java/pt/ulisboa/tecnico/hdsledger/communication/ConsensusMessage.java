@@ -12,14 +12,18 @@ public class ConsensusMessage extends Message {
     private String replyTo;
     // Id of the previous message
     private int replyToMessageId;
-    // Message (PREPREPARE, PREPARE, COMMIT)
+    // Message (PREPREPARE, PREPARE, COMMIT, CHECK_BALANCE, APPEND, TRANSFER, CONFIRMATION)
     private String message;
 
     public ConsensusMessage(String senderId, Type type) {
         super(senderId, type);
     }
 
-    public ConfirmationMessage deserializConfirmationMessage() {
+    public CheckBalanceMessage deserializeCheckBalanceMessage() {
+        return new Gson().fromJson(this.message, CheckBalanceMessage.class);
+    }
+
+    public ConfirmationMessage deserializeConfirmationMessage() {
         return new Gson().fromJson(this.message, ConfirmationMessage.class);
     }
     
