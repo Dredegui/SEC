@@ -82,13 +82,14 @@ public class MessageBucket {
         }).findFirst();
     }
 
-    // check if every (pr, pv) pair from each prepare messages is equal to (pr, pv) from the highest prepared round
+    // check if there is a quorum of (pr, pv) pair from each prepare messages is equal to (pr, pv) from the highest prepared round
     public boolean checkHighestPrepared(int instance, int round, int highestPreparedRound, String highestPreparedValue) {
-        return bucket.get(instance).get(round).values().stream().allMatch((message) -> {
-            int prepareRound = message.getRound();
-            PrepareMessage prepareMessage = message.deserializePrepareMessage();
-            return prepareRound == highestPreparedRound && prepareMessage.getValue().equals(highestPreparedValue);
-        });
+        long matchingCount = bucket.get(instance).get(round).values().stream().filter(message -> {
+                            int prepareRound = message.getRound();
+                            PrepareMessage prepareMessage = message.deserializePrepareMessage();
+                            return prepareRound == highestPreparedRound && prepareMessage.getValue().equals(highestPreparedValue);
+                        }).count();
+        return matchingCount >= (2 * f + 1);
     }
 
     public Optional<Integer> hasValidRoundChangeQuorum(String nodeId, int instance, int round) {
