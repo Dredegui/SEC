@@ -90,7 +90,7 @@ public class Client {
         Link linkToNodes = new Link(nodeConfig, private_key_path, nodeConfig.getPort(), nodeConfigs,
                 ConsensusMessage.class);
         
-        ClientService clientService = new ClientService(linkToNodes);
+        ClientService clientService = new ClientService(linkToNodes, private_key_path);
         Client client = new Client(clientService);
 
         // Start CLI

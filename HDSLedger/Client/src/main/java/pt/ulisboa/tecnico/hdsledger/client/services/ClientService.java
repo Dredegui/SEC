@@ -1,7 +1,13 @@
 package pt.ulisboa.tecnico.hdsledger.client.services;
 
 import java.io.IOException;
+import java.nio.file.Files;
+import java.nio.file.Paths;
+import java.security.KeyFactory;
+import java.security.PrivateKey;
 import java.security.SecureRandom;
+import java.security.spec.PKCS8EncodedKeySpec;
+import java.util.Base64;
 
 import com.google.gson.Gson;
 import pt.ulisboa.tecnico.hdsledger.communication.AppendMessage;
@@ -9,18 +15,23 @@ import pt.ulisboa.tecnico.hdsledger.communication.CheckBalanceMessage;
 import pt.ulisboa.tecnico.hdsledger.communication.ConfirmationMessage;
 import pt.ulisboa.tecnico.hdsledger.communication.ConsensusMessage;
 import pt.ulisboa.tecnico.hdsledger.communication.Message;
+import pt.ulisboa.tecnico.hdsledger.utilities.CryptSignature;
+import pt.ulisboa.tecnico.hdsledger.utilities.ErrorMessage;
+import pt.ulisboa.tecnico.hdsledger.utilities.HDSSException;
 import pt.ulisboa.tecnico.hdsledger.communication.Link;
 
 
 public class ClientService {
 
     private Link link;
-    private static SecureRandom random;
+    private int nonce;
+    private String privateKey;
 
-    public ClientService(Link link) {
+    public ClientService(Link link, String privateKeyPath) {
         this.link = link;
+        this.privateKey = privateKeyPath;
         try {
-            random = SecureRandom.getInstance("SHA1PRNG");
+            nonce = 0;
         } catch (Exception e) {
             e.printStackTrace();
         }
@@ -29,8 +40,10 @@ public class ClientService {
     public void append(String data, String id) {
 
         ConsensusMessage consensusMessage = new ConsensusMessage(id, Message.Type.APPEND);
-
-        consensusMessage.setMessage(new AppendMessage(data, random.nextInt()).toJson());
+        nonce++;
+        byte[] dataNonce = (data + nonce).getBytes();
+        byte[] signature = CryptSignature.sign(dataNonce, privateKey);
+        consensusMessage.setMessage(new AppendMessage(data, nonce, signature).toJson());
 
         this.link.broadcast(consensusMessage);
 
