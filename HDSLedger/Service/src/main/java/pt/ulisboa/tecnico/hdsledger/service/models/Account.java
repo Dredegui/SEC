@@ -4,9 +4,9 @@ public class Account {
     private String publicKey;
     private double balance;
 
-    public Account(String publicKey, double balance) {
+    public Account(String publicKey) {
         this.publicKey = publicKey;
-        this.balance = balance;
+        this.balance = 1000;
     }
 
     public String getPublicKey() {
@@ -23,6 +23,18 @@ public class Account {
 
     public void setBalance(double balance) {
         this.balance = balance;
+    }
+
+    public boolean hasEnoughBalance(double amount) {
+        return this.balance >= amount;
+    }
+
+    public double updateBalance(double amount) {
+        if (!hasEnoughBalance(amount)) {
+            return -1;
+        }
+        this.balance += amount;
+        return this.balance;
     }
 }
 
