@@ -16,6 +16,7 @@ import java.util.Timer;
 import java.util.TimerTask;
 
 import pt.ulisboa.tecnico.hdsledger.communication.AppendMessage;
+import pt.ulisboa.tecnico.hdsledger.communication.CheckBalanceMessage;
 import pt.ulisboa.tecnico.hdsledger.communication.CommitMessage;
 import pt.ulisboa.tecnico.hdsledger.communication.ConfirmationMessage;
 import pt.ulisboa.tecnico.hdsledger.communication.ConsensusMessage;
@@ -120,6 +121,10 @@ public class NodeService implements UDPService {
             nodesConfig[i - 1].updateLeader(round);
         }
         config.updateLeader(round);
+    }
+
+    public void addAccount(Account account) {
+        accounts.put(account.getPublicKey(), account);
     }
 
     public boolean isLeader(String id) {
@@ -231,7 +236,6 @@ public class NodeService implements UDPService {
         return validQuorum.isPresent() && justifyRoundChange(instance, round, validQuorum.get());
     }
 
-
     public void uponRoundChange(ConsensusMessage message) {
         // Save round change message in a bucket until f+1 messages are received
         InstanceInfo info = this.instanceInfo.get(this.consensusInstance.get());
@@ -336,6 +340,27 @@ public class NodeService implements UDPService {
                     MessageFormat.format("{0} - Node is not leader, waiting for PRE-PREPARE message", config.getId()));
         }
         activateTimer(delay, instance.getCurrentRound());
+    }
+
+    public void uponCheckBalance(ConsensusMessage message){
+        CheckBalanceMessage checkBalanceMessage = message.deserializeCheckBalanceMessage();
+
+        Account account = accounts.get(checkBalanceMessage.getPublicKey());
+        System.out.println("CheckBalanceMessage: " + checkBalanceMessage.getPublicKey());
+
+       if (account!=null) { 
+            double balance = account.getBalance();
+
+            CheckBalanceMessage reply = new CheckBalanceMessage(balance, checkBalanceMessage.getPublicKey());
+
+            ConsensusMessage consensusMessage = new ConsensusMessageBuilder(config.getId(), Message.Type.CHECK_BALANCE)
+                    .setMessage(reply.toJson())
+                    .build();
+
+            link.send(message.getSenderId(), consensusMessage);
+       }
+
+
     }
     
 
@@ -604,6 +629,9 @@ public class NodeService implements UDPService {
                         new Thread(() -> {
 
                             switch (message.getType()) {
+
+                                case CHECK_BALANCE ->
+                                    uponCheckBalance((ConsensusMessage) message);
 
                                 case ROUND_CHANGE ->
                                     uponRoundChange((ConsensusMessage) message);

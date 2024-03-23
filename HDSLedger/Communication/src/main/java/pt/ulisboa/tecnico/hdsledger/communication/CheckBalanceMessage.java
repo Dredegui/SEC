@@ -4,7 +4,9 @@ import com.google.gson.Gson;
 
 public class CheckBalanceMessage {
 
-    int balance;
+    double balance;
+
+    private String publicKey;
 
     // Constructor used by client
     public CheckBalanceMessage() {
@@ -12,16 +14,21 @@ public class CheckBalanceMessage {
     }
 
     // Constructor used by server
-    public CheckBalanceMessage(int balance){
+    public CheckBalanceMessage(double balance, String publicKey){
         this.balance = balance;
+        this.publicKey = publicKey;
     }
 
-    public int getBalance(){
+    public double getBalance(){
         return this.balance;
     }
 
-    public void setBalance(int balance) {
+    public void setBalance(double balance) {
         this.balance = balance;
+    }
+
+    public String getPublicKey() {
+        return this.publicKey;
     }
     
     public String toJson() {
