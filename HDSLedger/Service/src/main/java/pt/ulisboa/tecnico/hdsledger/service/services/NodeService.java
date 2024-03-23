@@ -25,6 +25,8 @@ import pt.ulisboa.tecnico.hdsledger.communication.PrePrepareMessage;
 import pt.ulisboa.tecnico.hdsledger.communication.PrepareMessage;
 import pt.ulisboa.tecnico.hdsledger.communication.RoundChangeMessage;
 import pt.ulisboa.tecnico.hdsledger.communication.builder.ConsensusMessageBuilder;
+import pt.ulisboa.tecnico.hdsledger.service.models.Account;
+import pt.ulisboa.tecnico.hdsledger.service.models.BlockChain;
 import pt.ulisboa.tecnico.hdsledger.service.models.InstanceInfo;
 import pt.ulisboa.tecnico.hdsledger.service.models.MessageBucket;
 import pt.ulisboa.tecnico.hdsledger.utilities.CryptSignature;
@@ -65,6 +67,12 @@ public class NodeService implements UDPService {
 
     // Ledger (for now, just a list of strings)
     private ArrayList<String> ledger = new ArrayList<String>();
+
+    // BlockChain
+    private BlockChain blockChain = new BlockChain();
+
+    // Account map (public key -> account)
+    private Map<String, Account> accounts = new ConcurrentHashMap<>();
 
     private Timer timer;
     
