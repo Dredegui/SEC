@@ -91,77 +91,6 @@ public class Link {
         }
     }
 
-    public static PublicKey getPublicKey(String publicKeyPath) {
-        try {
-            byte[] keyBytes = Files.readAllBytes(Paths.get(publicKeyPath));
-            // remove the header, footer and newlines from key
-            String uKey = new String(keyBytes);
-            uKey = uKey.replace("-----BEGIN PUBLIC KEY-----", "");
-            uKey = uKey.replace("-----END PUBLIC KEY-----", "");
-            uKey = uKey.replaceAll("\\s+", "");
-            keyBytes = Base64.getDecoder().decode(uKey);
-            return KeyFactory.getInstance("RSA").generatePublic(new X509EncodedKeySpec(keyBytes));
-        } catch (Exception e) {
-            throw new HDSSException(ErrorMessage.ExtractKeyError);
-        }
-	}
-
-    public static PrivateKey getPrivateKey(String privateKeyPath) {
-        try {
-            byte[] keyBytes = Files.readAllBytes(Paths.get(privateKeyPath));
-            // remove the header, footer and newlines from key
-            String rKey = new String(keyBytes);
-            rKey = rKey.replace("-----BEGIN PRIVATE KEY-----", "");
-            rKey = rKey.replace("-----END PRIVATE KEY-----", "");
-            rKey = rKey.replaceAll("\\s+", "");
-            keyBytes = Base64.getDecoder().decode(rKey);
-            KeyFactory keyFactory = KeyFactory.getInstance("RSA");
-            PKCS8EncodedKeySpec keySpec = new PKCS8EncodedKeySpec(keyBytes);
-            return keyFactory.generatePrivate(keySpec);
-        } catch (Exception e) {
-            throw new HDSSException(ErrorMessage.ExtractKeyError);
-        }
-    }
-
-    // Function that generates a key signature from a value
-    public byte[] sign(byte[] data) {
-        byte[] signature = new byte[256];
-        // current node private key
-        PrivateKey privKey = getPrivateKey(privateKey);
-        try {
-            // Create a Signature object and initialize it with the private key
-            Signature rsa = Signature.getInstance("SHA256withRSA");
-            rsa.initSign(privKey);
-            // Update and sign the data
-            rsa.update(data);
-            signature = rsa.sign();
-        } catch (Exception e) { // TODO: improve exception handling and specification
-            e.printStackTrace();
-        }
-        return signature;
-    }
-
-    // inverse of the sign function aka validate
-    public boolean validate(String nodeId, byte[] data, byte[] signature) {
-        ProcessConfig sender = nodes.get(nodeId);
-        if (sender == null)
-            sender = clients.get(nodeId);
-        // Other node public key
-        String publicKey = sender.getPublicKey();
-        //extract public key from .key file
-        PublicKey pubKey = getPublicKey(publicKey);
-        // validate signature
-        try {
-            Signature rsa = Signature.getInstance("SHA256withRSA");
-            rsa.initVerify(pubKey);
-            rsa.update(data);
-            return rsa.verify(signature);
-        } catch (Exception e) { // TODO: improve exception handling and specification
-            e.printStackTrace();
-            return false;
-        }
-    }
-
     public void ackAll(List<Integer> messageIds) {
         receivedAcks.addAll(messageIds);
     }
@@ -215,7 +144,7 @@ public class Link {
                     return;
                 }
                 byte[] buf = new Gson().toJson(data).getBytes();
-                byte[] signature = sign(buf);
+                byte[] signature = CryptSignature.sign(buf, privateKey);
                 for (;;) {
                     LOGGER.log(Level.INFO, MessageFormat.format(
                             "{0} - Sending {1} message to {2}:{3} with message ID {4} - Attempt #{5}", config.getId(),
@@ -298,7 +227,13 @@ public class Link {
             serialized = new String(messageBuffer);
             message = new Gson().fromJson(serialized, Message.class);
             // verify the signature
-            if (!validate(message.getSenderId(), messageBuffer, signature)) {
+            String nodeId = message.getSenderId();
+            ProcessConfig sender = nodes.get(nodeId);
+            if (sender == null)
+                sender = clients.get(nodeId);
+            // Other node public key
+            String publicKey = sender.getPublicKey();
+            if (!CryptSignature.validate(nodeId, messageBuffer, signature, publicKey)) {
                 throw new HDSSException(ErrorMessage.InvalidSignature);
             }
         }
@@ -361,7 +296,7 @@ public class Link {
             responseMessage.setMessageId(messageId);
             // sign the ACK
             byte[] buf = new Gson().toJson(responseMessage).getBytes();
-            byte[] signature = sign(buf);
+            byte[] signature = CryptSignature.sign(buf, privateKey);
             // ACK is sent without needing for another ACK because
             // we're assuming an eventually synchronous network
             // Even if a node receives the message multiple times,
