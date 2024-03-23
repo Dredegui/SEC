@@ -14,6 +14,8 @@ public class ConsensusMessage extends Message {
     private int replyToMessageId;
     // Message (PREPREPARE, PREPARE, COMMIT, CHECK_BALANCE, APPEND, TRANSFER, CONFIRMATION)
     private String message;
+    // Append message that client sent
+    private Message appendMessage;
 
     public ConsensusMessage(String senderId, Type type) {
         super(senderId, type);
@@ -53,6 +55,14 @@ public class ConsensusMessage extends Message {
 
     public void setMessage(String message) {
         this.message = message;
+    }
+
+    public Message getAppendMessage() {
+        return appendMessage;
+    }
+
+    public void setAppendMessage(Message appendMessage) {
+        this.appendMessage = appendMessage;
     }
 
     public int getConsensusInstance() {

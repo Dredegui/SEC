@@ -26,6 +26,10 @@ public class AppendMessage {
         return nonce;
     }
 
+    public byte[] getSignature() {
+        return signature;
+    }
+
     public String toJson() {
         return new Gson().toJson(this);
     }

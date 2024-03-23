@@ -6,10 +6,7 @@ import pt.ulisboa.tecnico.hdsledger.communication.Message.Type;
 import pt.ulisboa.tecnico.hdsledger.utilities.*;
 
 import java.io.IOException;
-import java.io.PrintWriter;
-import java.io.StringWriter;
 import java.net.*;
-import java.security.interfaces.RSAPublicKey;
 import java.text.MessageFormat;
 import java.util.*;
 import java.util.concurrent.ConcurrentHashMap;
@@ -17,20 +14,6 @@ import java.util.concurrent.ConcurrentLinkedQueue;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.logging.Level;
 import java.util.logging.LogManager;
-import java.security.PublicKey;
-import java.security.PrivateKey;
-import java.io.DataOutputStream;
-import java.io.File;
-import java.io.FileOutputStream;
-import java.io.FileWriter;
-import java.nio.file.Files;
-import java.nio.file.Paths;
-import java.security.KeyFactory;
-import java.security.spec.PKCS8EncodedKeySpec;
-import java.security.spec.X509EncodedKeySpec;
-import java.security.Signature;
-import javax.crypto.Cipher;
-
 
 public class Link {
 
@@ -233,7 +216,7 @@ public class Link {
                 sender = clients.get(nodeId);
             // Other node public key
             String publicKey = sender.getPublicKey();
-            if (!CryptSignature.validate(nodeId, messageBuffer, signature, publicKey)) {
+            if (!CryptSignature.validate(messageBuffer, signature, publicKey)) {
                 throw new HDSSException(ErrorMessage.InvalidSignature);
             }
         }

@@ -1,7 +1,6 @@
 package pt.ulisboa.tecnico.hdsledger.service.services;
 
 import java.io.IOException;
-import java.sql.Time;
 import java.text.MessageFormat;
 import java.util.ArrayList;
 import java.util.Collection;
@@ -28,6 +27,7 @@ import pt.ulisboa.tecnico.hdsledger.communication.RoundChangeMessage;
 import pt.ulisboa.tecnico.hdsledger.communication.builder.ConsensusMessageBuilder;
 import pt.ulisboa.tecnico.hdsledger.service.models.InstanceInfo;
 import pt.ulisboa.tecnico.hdsledger.service.models.MessageBucket;
+import pt.ulisboa.tecnico.hdsledger.utilities.CryptSignature;
 import pt.ulisboa.tecnico.hdsledger.utilities.CustomLogger;
 import pt.ulisboa.tecnico.hdsledger.utilities.ProcessConfig;
 
@@ -129,6 +129,22 @@ public class NodeService implements UDPService {
                 .build();
 
         return consensusMessage;
+    }
+
+    // Validate AppendMessage signature
+    public boolean validateAppendMessageSignature(ConsensusMessage consensusMessage) {
+        ConsensusMessage appendMessage = (ConsensusMessage)consensusMessage.getAppendMessage();
+        String nodeId = appendMessage.getSenderId();
+        String publicKey = null;
+        for (int i = 0; i < nodesConfig.length; i++) {
+            if (nodesConfig[i].getId().equals(nodeId)) {
+                publicKey = nodesConfig[i].getPublicKey();
+                break;
+            }
+        }
+        AppendMessage deserializedAppendMessage = appendMessage.deserializeAppendMessage();
+        byte[] data = (deserializedAppendMessage.getValue() + deserializedAppendMessage.getNonce()).getBytes();
+        return CryptSignature.validate(data, deserializedAppendMessage.getSignature(), publicKey);
     }
 
     public ConsensusMessage createRoundChange(int instance, int round, int preparedRound, String preparedValue) {

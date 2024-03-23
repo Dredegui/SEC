@@ -6,19 +6,14 @@ import static org.junit.Assert.*;
 import java.text.MessageFormat;
 import java.util.Arrays;
 import java.util.HashMap;
-import java.util.List;
-import java.util.logging.Level;
 
 import org.junit.Before;
 import org.junit.Test;
-import org.junit.jupiter.api.Order;
 import org.junit.jupiter.api.parallel.Execution;
 import org.junit.jupiter.api.parallel.ExecutionMode;
 
 import pt.ulisboa.tecnico.hdsledger.communication.ConsensusMessage;
 import pt.ulisboa.tecnico.hdsledger.communication.Link;
-import pt.ulisboa.tecnico.hdsledger.communication.Message;
-import pt.ulisboa.tecnico.hdsledger.service.services.NodeService;
 import pt.ulisboa.tecnico.hdsledger.utilities.ProcessConfig;
 import pt.ulisboa.tecnico.hdsledger.utilities.ProcessConfigBuilder;
 

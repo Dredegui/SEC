@@ -1,13 +1,6 @@
 package pt.ulisboa.tecnico.hdsledger.client.services;
 
 import java.io.IOException;
-import java.nio.file.Files;
-import java.nio.file.Paths;
-import java.security.KeyFactory;
-import java.security.PrivateKey;
-import java.security.SecureRandom;
-import java.security.spec.PKCS8EncodedKeySpec;
-import java.util.Base64;
 
 import com.google.gson.Gson;
 import pt.ulisboa.tecnico.hdsledger.communication.AppendMessage;

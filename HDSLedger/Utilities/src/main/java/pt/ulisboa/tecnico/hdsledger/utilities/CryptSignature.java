@@ -66,7 +66,7 @@ public class CryptSignature {
     }
 
     // inverse of the sign function aka validate
-    public static boolean validate(String nodeId, byte[] data, byte[] signature, String publicKey) {
+    public static boolean validate(byte[] data, byte[] signature, String publicKey) {
         //extract public key from .key file
         PublicKey pubKey = getPublicKey(publicKey);
         // validate signature
