@@ -26,8 +26,8 @@ public class Client {
         clientService.append(message, id);
     }
 
-    private void check_balance(String id, String publicKey){
-        clientService.check_balance(id, publicKey);
+    private void check_balance(String id){
+        clientService.check_balance(id);
     }
 
     private void transfer(String destinationId, int amount) {
@@ -35,7 +35,7 @@ public class Client {
         //clientService.transfer(destinationId,amount);
     }
 
-    public void cli(String id, String publicKey) {
+    public void cli(String id) {
             Scanner scanner = new Scanner(System.in);
             boolean running = true;
     
@@ -56,7 +56,7 @@ public class Client {
                         appendMessage(message,id);
                         break;
                     case 2:
-                        check_balance(id, publicKey);
+                        check_balance(id);
                         break;
                     case 3:
                         System.out.print("Enter the destination: ");
@@ -96,6 +96,6 @@ public class Client {
         Client client = new Client(clientService);
 
         // Start CLI
-        client.cli(id, nodeConfig.getPublicKey());
+        client.cli(id);
     }
 }

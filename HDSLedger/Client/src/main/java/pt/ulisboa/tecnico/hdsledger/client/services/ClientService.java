@@ -46,11 +46,11 @@ public class ClientService {
 
     }
 
-    public void check_balance(String id, String publicKey) {
+    public void check_balance(String id) {
 
         ConsensusMessage consensusMessage = new ConsensusMessage(id, Message.Type.CHECK_BALANCE);
 
-        consensusMessage.setMessage(new CheckBalanceMessage(publicKey).toJson());
+        consensusMessage.setMessage(new CheckBalanceMessage().toJson());
 
         this.link.broadcast(consensusMessage);
         
