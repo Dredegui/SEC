@@ -2,6 +2,7 @@ package pt.ulisboa.tecnico.hdsledger.client;
 
 import pt.ulisboa.tecnico.hdsledger.client.services.ClientService;
 import pt.ulisboa.tecnico.hdsledger.communication.ConsensusMessage;
+import pt.ulisboa.tecnico.hdsledger.utilities.CryptSignature;
 import pt.ulisboa.tecnico.hdsledger.utilities.ProcessConfig;
 import pt.ulisboa.tecnico.hdsledger.utilities.ProcessConfigBuilder;
 import pt.ulisboa.tecnico.hdsledger.communication.Link;
@@ -25,8 +26,8 @@ public class Client {
         clientService.append(message, id);
     }
 
-    private void check_balance(String id){
-        clientService.check_balance(id);
+    private void check_balance(String id, String publicKey){
+        clientService.check_balance(id, publicKey);
     }
 
     private void transfer(String destinationId, int amount) {
@@ -34,7 +35,7 @@ public class Client {
         //clientService.transfer(destinationId,amount);
     }
 
-    public void cli(String id) {
+    public void cli(String id, String publicKey) {
             Scanner scanner = new Scanner(System.in);
             boolean running = true;
     
@@ -55,7 +56,7 @@ public class Client {
                         appendMessage(message,id);
                         break;
                     case 2:
-                        check_balance(id);
+                        check_balance(id, publicKey);
                         break;
                     case 3:
                         System.out.print("Enter the destination: ");
@@ -86,6 +87,7 @@ public class Client {
         ProcessConfig[] nodeConfigs = new ProcessConfigBuilder().fromFile(nodesConfigPath);
         ProcessConfig nodeConfig = Arrays.stream(nodeConfigs).filter(c -> c.getId().equals(id)).findAny().get();
 
+
         // Abstraction to send and receive messages
         Link linkToNodes = new Link(nodeConfig, private_key_path, nodeConfig.getPort(), nodeConfigs,
                 ConsensusMessage.class);
@@ -94,6 +96,6 @@ public class Client {
         Client client = new Client(clientService);
 
         // Start CLI
-        client.cli(id);
+        client.cli(id, nodeConfig.getPublicKey());
     }
 }

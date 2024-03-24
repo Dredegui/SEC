@@ -1,6 +1,8 @@
 package pt.ulisboa.tecnico.hdsledger.service.services;
 
 import java.io.IOException;
+import java.nio.file.Files;
+import java.nio.file.Paths;
 import java.text.MessageFormat;
 import java.util.ArrayList;
 import java.util.Collection;
@@ -342,23 +344,35 @@ public class NodeService implements UDPService {
         activateTimer(delay, instance.getCurrentRound());
     }
 
+    public String loadPublicKey(String publicKeyPath) {
+        try {
+            // Read all bytes from the path
+            byte[] keyBytes = Files.readAllBytes(Paths.get(publicKeyPath));
+            // Convert to a string, assuming the key is encoded in a standard format
+            return new String(keyBytes);
+        } catch (IOException e) {
+            e.printStackTrace();
+            return null; // Or handle error appropriately
+        }
+    }
+
     public void uponCheckBalance(ConsensusMessage message){
         CheckBalanceMessage checkBalanceMessage = message.deserializeCheckBalanceMessage();
 
-        Account account = accounts.get(checkBalanceMessage.getPublicKey());
-        System.out.println("CheckBalanceMessage: " + checkBalanceMessage.getPublicKey());
+        Account account = accounts.get(loadPublicKey(checkBalanceMessage.getPublicKey()));
 
-       if (account!=null) { 
+        if (account!=null) { 
+
             double balance = account.getBalance();
 
-            CheckBalanceMessage reply = new CheckBalanceMessage(balance, checkBalanceMessage.getPublicKey());
+            CheckBalanceMessage reply = new CheckBalanceMessage(balance);
 
             ConsensusMessage consensusMessage = new ConsensusMessageBuilder(config.getId(), Message.Type.CHECK_BALANCE)
                     .setMessage(reply.toJson())
                     .build();
 
             link.send(message.getSenderId(), consensusMessage);
-       }
+        }
 
 
     }
