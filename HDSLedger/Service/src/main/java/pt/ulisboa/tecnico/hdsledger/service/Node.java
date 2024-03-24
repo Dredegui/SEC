@@ -46,9 +46,6 @@ public class Node {
             NodeService nodeService = new NodeService(linkToNodes, nodeConfig, leaderConfig,
                     nodeConfigs);
 
-            nodeService.addAccount(new Account(nodeService.loadPublicKey(account1_public_key_path)));
-            nodeService.addAccount(new Account(nodeService.loadPublicKey(account2_public_key_path)));
-
             nodeService.listen();
 
         } catch (Exception e) {

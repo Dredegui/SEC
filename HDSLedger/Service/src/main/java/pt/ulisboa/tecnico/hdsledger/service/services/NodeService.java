@@ -5,6 +5,7 @@ import java.nio.file.Files;
 import java.nio.file.Paths;
 import java.text.MessageFormat;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.Collection;
 import java.util.Map;
 import java.util.Optional;
@@ -94,6 +95,9 @@ public class NodeService implements UDPService {
             if (!nodesConfig[i].getId().contains("client")) {
                 nodeCount++;
             }
+            else {
+                accounts.put(nodesConfig[i].getId(), new Account());
+            }
         }
         this.prepareMessages = new MessageBucket(nodeCount);
         this.commitMessages = new MessageBucket(nodeCount);
@@ -123,10 +127,6 @@ public class NodeService implements UDPService {
             nodesConfig[i - 1].updateLeader(round);
         }
         config.updateLeader(round);
-    }
-
-    public void addAccount(Account account) {
-        accounts.put(account.getPublicKey(), account);
     }
 
     public boolean isLeader(String id) {
@@ -344,22 +344,14 @@ public class NodeService implements UDPService {
         activateTimer(delay, instance.getCurrentRound());
     }
 
-    public String loadPublicKey(String publicKeyPath) {
-        try {
-            // Read all bytes from the path
-            byte[] keyBytes = Files.readAllBytes(Paths.get(publicKeyPath));
-            // Convert to a string, assuming the key is encoded in a standard format
-            return new String(keyBytes);
-        } catch (IOException e) {
-            e.printStackTrace();
-            return null; // Or handle error appropriately
-        }
-    }
-
     public void uponCheckBalance(ConsensusMessage message){
         CheckBalanceMessage checkBalanceMessage = message.deserializeCheckBalanceMessage();
 
-        Account account = accounts.get(loadPublicKey(checkBalanceMessage.getPublicKey()));
+        String senderId = message.getSenderId();
+
+        ProcessConfig nodeConfig = Arrays.stream(nodesConfig).filter(c -> c.getId().equals(senderId)).findAny().get(); 
+
+        Account account = accounts.get(senderId);
 
         if (account!=null) { 
 
@@ -369,11 +361,11 @@ public class NodeService implements UDPService {
 
             ConsensusMessage consensusMessage = new ConsensusMessageBuilder(config.getId(), Message.Type.CHECK_BALANCE)
                     .setMessage(reply.toJson())
+                    .setReplyTo(senderId)
                     .build();
 
-            link.send(message.getSenderId(), consensusMessage);
+            link.send(senderId, consensusMessage);
         }
-
 
     }
     
