@@ -86,7 +86,8 @@ public class ClientService {
                 if (message.getType() == Message.Type.CHECK_BALANCE) {
                     ConsensusMessage consensusMessage = ((ConsensusMessage) message);
                     CheckBalanceMessage checkBalanceMessage = consensusMessage.deserializeCheckBalanceMessage();
-                    System.out.println("Your balance is: " + checkBalanceMessage.getBalance());
+                    System.out.println("Your autorized balance is: " + checkBalanceMessage.getAutorizedBalance());
+                    System.out.println("Your contablistic balance is: " + checkBalanceMessage.getContablisticBalance());
                     listen = false;
                 }
             }

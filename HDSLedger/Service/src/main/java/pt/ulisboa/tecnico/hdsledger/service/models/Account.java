@@ -1,30 +1,40 @@
 package pt.ulisboa.tecnico.hdsledger.service.models;
 
 public class Account {
-    private double balance;
+    private double autorizedBalance;
+    private double contablisticBalance;
 
     public Account() {
-        this.balance = 1000;
+        this.autorizedBalance = 1000;
+        this.contablisticBalance = 1000;
     }
     
-    public double getBalance() {
-        return balance;
+    public double getAutorizedBalance() {
+        return autorizedBalance;
     }
 
-    public void setBalance(double balance) {
-        this.balance = balance;
+    public void setAutorizedBalance(double autorizedBalance) {
+        this.autorizedBalance = autorizedBalance;
     }
 
-    public boolean hasEnoughBalance(double amount) {
-        return this.balance >= amount;
+    public boolean hasEnoughAutorizedBalance(double amount) {
+        return this.autorizedBalance >= amount;
     }
 
     public double updateBalance(double amount) {
-        if (!hasEnoughBalance(amount)) {
+        if (!hasEnoughAutorizedBalance(amount)) {
             return -1;
         }
-        this.balance += amount;
-        return this.balance;
+        this.autorizedBalance += amount;
+        return this.autorizedBalance;
+    }
+
+    public double getContablisticBalance() {
+        return contablisticBalance;
+    }
+
+    public void setContablisticBalance(double contablisticBalance) {
+        this.contablisticBalance = contablisticBalance;
     }
 }
 

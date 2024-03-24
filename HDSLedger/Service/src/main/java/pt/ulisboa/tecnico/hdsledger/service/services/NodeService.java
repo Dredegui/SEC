@@ -355,9 +355,10 @@ public class NodeService implements UDPService {
 
         if (account!=null) { 
 
-            double balance = account.getBalance();
+            double autorizedBalance = account.getAutorizedBalance();
+            double contablisticBalance = account.getContablisticBalance();
 
-            CheckBalanceMessage reply = new CheckBalanceMessage(balance);
+            CheckBalanceMessage reply = new CheckBalanceMessage(autorizedBalance, contablisticBalance);
 
             ConsensusMessage consensusMessage = new ConsensusMessageBuilder(config.getId(), Message.Type.CHECK_BALANCE)
                     .setMessage(reply.toJson())
