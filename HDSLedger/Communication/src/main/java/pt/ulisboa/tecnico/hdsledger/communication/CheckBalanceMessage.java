@@ -6,12 +6,10 @@ public class CheckBalanceMessage {
 
     double balance;
 
-    private String publicKey;
 
     // Constructor used by client
-    public CheckBalanceMessage(String publicKey) {
+    public CheckBalanceMessage() {
         this.balance = -1;
-        this.publicKey = publicKey;
     }
 
     // Constructor used by server
@@ -23,17 +21,12 @@ public class CheckBalanceMessage {
         return this.balance;
     }
 
-    public String getPublicKey() {
-        return publicKey;
-    }
+
 
     public void setBalance(double balance) {
         this.balance = balance;
     }
 
-    public void setPublicKey(String publicKey) {
-        this.publicKey = publicKey;
-    }
 
     public String toJson() {
         return new Gson().toJson(this);
