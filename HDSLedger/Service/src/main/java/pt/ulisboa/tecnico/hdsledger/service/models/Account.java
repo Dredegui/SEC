@@ -3,10 +3,21 @@ package pt.ulisboa.tecnico.hdsledger.service.models;
 public class Account {
     private double autorizedBalance;
     private double contablisticBalance;
+    private String publicKeyHash;
 
-    public Account() {
+
+    public Account(String publicKeyHash) {
         this.autorizedBalance = 1000;
         this.contablisticBalance = 1000;
+        this.publicKeyHash = publicKeyHash;
+    }
+
+    public String getPublicKeyHash() {
+        return publicKeyHash;
+    }
+
+    public void setPublicKeyHash(String publicKeyHash) {
+        this.publicKeyHash = publicKeyHash;
     }
     
     public double getAutorizedBalance() {
