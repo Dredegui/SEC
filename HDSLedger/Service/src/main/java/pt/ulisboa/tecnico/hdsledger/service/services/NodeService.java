@@ -3,6 +3,7 @@ package pt.ulisboa.tecnico.hdsledger.service.services;
 import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Paths;
+import java.security.NoSuchAlgorithmException;
 import java.text.MessageFormat;
 import java.util.ArrayList;
 import java.util.Arrays;
@@ -96,7 +97,15 @@ public class NodeService implements UDPService {
                 nodeCount++;
             }
             else {
-                accounts.put(nodesConfig[i].getId(), new Account());
+                try{
+
+                    String publicKey = CryptSignature.loadPublicKey(nodesConfig[i].getPublicKey());
+                    String publicKeyHash = CryptSignature.hashPublicKey(publicKey);
+                    accounts.put(publicKeyHash, new Account(publicKeyHash));
+
+                } catch (NoSuchAlgorithmException e) {
+                    e.printStackTrace();
+                }
             }
         }
         this.prepareMessages = new MessageBucket(nodeCount);
@@ -347,11 +356,9 @@ public class NodeService implements UDPService {
     public void uponCheckBalance(ConsensusMessage message){
         CheckBalanceMessage checkBalanceMessage = message.deserializeCheckBalanceMessage();
 
+        Account account = accounts.get(checkBalanceMessage.getPublicKeyHash());
+
         String senderId = message.getSenderId();
-
-        ProcessConfig nodeConfig = Arrays.stream(nodesConfig).filter(c -> c.getId().equals(senderId)).findAny().get(); 
-
-        Account account = accounts.get(senderId);
 
         if (account!=null) { 
 

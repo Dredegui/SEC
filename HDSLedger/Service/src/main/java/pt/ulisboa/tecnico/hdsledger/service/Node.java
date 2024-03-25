@@ -18,8 +18,6 @@ public class Node {
     // Hardcoded path to files
     private static String nodesConfigPath = "src/main/resources/";
     private static String private_key_path = "src/main/resources/";
-    private static String account1_public_key_path = "src/main/resources/publicKeys/clientPublic.key";
-    private static String account2_public_key_path = "src/main/resources/publicKeys/client1Public.key";
 
     public static void main(String[] args) {
 
