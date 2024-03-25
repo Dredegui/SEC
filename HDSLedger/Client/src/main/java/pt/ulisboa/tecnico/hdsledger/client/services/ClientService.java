@@ -11,6 +11,7 @@ import pt.ulisboa.tecnico.hdsledger.communication.CheckBalanceMessage;
 import pt.ulisboa.tecnico.hdsledger.communication.ConfirmationMessage;
 import pt.ulisboa.tecnico.hdsledger.communication.ConsensusMessage;
 import pt.ulisboa.tecnico.hdsledger.communication.Message;
+import pt.ulisboa.tecnico.hdsledger.communication.TransferMessage;
 import pt.ulisboa.tecnico.hdsledger.utilities.CryptSignature;
 import pt.ulisboa.tecnico.hdsledger.utilities.ProcessConfig;
 import pt.ulisboa.tecnico.hdsledger.communication.Link;
@@ -22,28 +23,19 @@ public class ClientService {
     private Link link;
     private int nonce;
     private String privateKey;
-    // Nodes configurations
-    private final ProcessConfig[] nodesConfig;
 
     private final MessageBucket checkBalanceMessages;
 
     public ClientService(Link link, String privateKeyPath, ProcessConfig[] nodesConfig) {
         this.link = link;
         this.privateKey = privateKeyPath;
-        this.nodesConfig = nodesConfig;
+        this.nonce = 0;
         int nodeCount = 0;
         for (int i = 0; i < nodesConfig.length; i++) {
             if (!nodesConfig[i].getId().contains("client")) {
                 nodeCount++;
             }
         }
-        
-        try {
-            nonce = 0;
-        } catch (Exception e) {
-            e.printStackTrace();
-        }
-
         this.checkBalanceMessages = new MessageBucket(nodeCount);
     }
 
@@ -75,8 +67,19 @@ public class ClientService {
 
     }
 
-    public void transfer(String destinationPublicKeyHash, double amount) {
-        // TODO
+    public void transfer(String id, String sourcePublicKeyHash, String destinyPublicKeyHash, double amount) {
+
+        ConsensusMessage consensusMessage = new ConsensusMessage(id, Message.Type.TRANSFER);
+        nonce++;
+        byte[] dataNonce = (sourcePublicKeyHash + destinyPublicKeyHash + amount + nonce).getBytes();
+        byte[] signature = CryptSignature.sign(dataNonce, privateKey);
+
+        consensusMessage.setMessage(new TransferMessage(sourcePublicKeyHash, destinyPublicKeyHash, amount, signature).toJson());
+
+        this.link.broadcast(consensusMessage);
+
+        System.out.println("Waiting for confirmation...");
+        
     }
 
     public void listenConfirmation() {
