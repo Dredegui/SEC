@@ -1,4 +1,4 @@
-package pt.models;
+package pt.ulisboa.tecnico.hdsledger.client.models;
 
 import java.util.HashMap;
 import java.util.List;
@@ -14,8 +14,8 @@ public class MessageBucket {
     private final int quorumSize;
     private int f;
 
-    // List to store CheckBalanceMessages
-    private final List<CheckBalanceMessage> balanceMessages = new CopyOnWriteArrayList<>();
+    // List of CheckBalanceMessages
+    private List<CheckBalanceMessage> balanceMessages = new CopyOnWriteArrayList<>();
     
     public MessageBucket(int nodeCount) {
         f = Math.floorDiv(nodeCount - 1, 3);
@@ -24,6 +24,10 @@ public class MessageBucket {
 
     public void addCheckBalanceMessage(CheckBalanceMessage message) {
         balanceMessages.add(message);
+    }
+
+    public void clearCheckBalanceMessages() {
+        balanceMessages.clear();
     }
 
     public Optional<Double[]> hasValidCheckBalanceQuorum() {

@@ -5,15 +5,13 @@ import java.util.Optional;
 
 import com.google.gson.Gson;
 
-import pt.models.MessageBucket;
+import pt.ulisboa.tecnico.hdsledger.client.models.MessageBucket;
 import pt.ulisboa.tecnico.hdsledger.communication.AppendMessage;
 import pt.ulisboa.tecnico.hdsledger.communication.CheckBalanceMessage;
 import pt.ulisboa.tecnico.hdsledger.communication.ConfirmationMessage;
 import pt.ulisboa.tecnico.hdsledger.communication.ConsensusMessage;
 import pt.ulisboa.tecnico.hdsledger.communication.Message;
 import pt.ulisboa.tecnico.hdsledger.utilities.CryptSignature;
-import pt.ulisboa.tecnico.hdsledger.utilities.ErrorMessage;
-import pt.ulisboa.tecnico.hdsledger.utilities.HDSSException;
 import pt.ulisboa.tecnico.hdsledger.utilities.ProcessConfig;
 import pt.ulisboa.tecnico.hdsledger.communication.Link;
 
@@ -107,25 +105,24 @@ public class ClientService {
                     ConsensusMessage consensusMessage = ((ConsensusMessage) message);
                     CheckBalanceMessage checkBalanceMessage = consensusMessage.deserializeCheckBalanceMessage();
 
-                    // Add the message to your collection
                     checkBalanceMessages.addCheckBalanceMessage(checkBalanceMessage);
 
-                    // Now, check for a quorum
+                    // Check if a quorum is reached
                     Optional<Double[]> quorumResult = checkBalanceMessages.hasValidCheckBalanceQuorum();
                     if (quorumResult.isPresent()) {
-                        // Quorum is present, extract the balances from the Optional
                         Double[] balances = quorumResult.get();
                         Double authorizedBalance = balances[0];
                         Double contabilisticBalance = balances[1];
 
-                        // Output the quorum balances
-                        System.out.println("Quorum reached.");
+                        System.out.println("Quorum reached!");
                         System.out.println("Your authorized balance is: " + authorizedBalance);
                         System.out.println("Your contabilistic balance is: " + contabilisticBalance);
 
-                        listen = false; // Stop listening as quorum is achieved
+                        checkBalanceMessages.clearCheckBalanceMessages();
+
+                        listen = false; 
                     } else {
-                        // Output a message indicating you're waiting for a quorum
+                        
                         System.out.println("Waiting for a quorum...");
                     }
                 }
