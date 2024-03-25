@@ -93,7 +93,7 @@ public class Client {
         Link linkToNodes = new Link(nodeConfig, private_key_path, nodeConfig.getPort(), nodeConfigs,
                 ConsensusMessage.class);
         
-        ClientService clientService = new ClientService(linkToNodes, private_key_path);
+        ClientService clientService = new ClientService(linkToNodes, private_key_path, nodeConfigs);
         Client client = new Client(clientService);
 
         String publicKey = CryptSignature.loadPublicKey(nodeConfig.getPublicKey());
