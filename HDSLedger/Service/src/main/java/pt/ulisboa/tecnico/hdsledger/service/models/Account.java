@@ -1,40 +1,51 @@
 package pt.ulisboa.tecnico.hdsledger.service.models;
 
 public class Account {
-    private String publicKey;
-    private double balance;
+    private double autorizedBalance;
+    private double contablisticBalance;
+    private String publicKeyHash;
 
-    public Account(String publicKey) {
-        this.publicKey = publicKey;
-        this.balance = 1000;
+
+    public Account(String publicKeyHash) {
+        this.autorizedBalance = 1000;
+        this.contablisticBalance = 1000;
+        this.publicKeyHash = publicKeyHash;
     }
 
-    public String getPublicKey() {
-        return publicKey;
+    public String getPublicKeyHash() {
+        return publicKeyHash;
     }
 
-    public void setPublicKey(String publicKey) {
-        this.publicKey = publicKey;
+    public void setPublicKeyHash(String publicKeyHash) {
+        this.publicKeyHash = publicKeyHash;
+    }
+    
+    public double getAutorizedBalance() {
+        return autorizedBalance;
     }
 
-    public double getBalance() {
-        return balance;
+    public void setAutorizedBalance(double autorizedBalance) {
+        this.autorizedBalance = autorizedBalance;
     }
 
-    public void setBalance(double balance) {
-        this.balance = balance;
-    }
-
-    public boolean hasEnoughBalance(double amount) {
-        return this.balance >= amount;
+    public boolean hasEnoughAutorizedBalance(double amount) {
+        return this.autorizedBalance >= amount;
     }
 
     public double updateBalance(double amount) {
-        if (!hasEnoughBalance(amount)) {
+        if (!hasEnoughAutorizedBalance(amount)) {
             return -1;
         }
-        this.balance += amount;
-        return this.balance;
+        this.autorizedBalance += amount;
+        return this.autorizedBalance;
+    }
+
+    public double getContablisticBalance() {
+        return contablisticBalance;
+    }
+
+    public void setContablisticBalance(double contablisticBalance) {
+        this.contablisticBalance = contablisticBalance;
     }
 }
 

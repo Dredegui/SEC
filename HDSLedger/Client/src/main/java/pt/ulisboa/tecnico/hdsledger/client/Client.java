@@ -2,11 +2,13 @@ package pt.ulisboa.tecnico.hdsledger.client;
 
 import pt.ulisboa.tecnico.hdsledger.client.services.ClientService;
 import pt.ulisboa.tecnico.hdsledger.communication.ConsensusMessage;
+import pt.ulisboa.tecnico.hdsledger.utilities.CryptSignature;
 import pt.ulisboa.tecnico.hdsledger.utilities.ProcessConfig;
 import pt.ulisboa.tecnico.hdsledger.utilities.ProcessConfigBuilder;
 import pt.ulisboa.tecnico.hdsledger.communication.Link;
 
 import java.util.Scanner;
+import java.security.NoSuchAlgorithmException;
 import java.util.Arrays;
 
 public class Client {
@@ -25,8 +27,8 @@ public class Client {
         clientService.append(message, id);
     }
 
-    private void check_balance(String id){
-        clientService.check_balance(id);
+    private void check_balance(String id, String publicKeyHash){
+        clientService.check_balance(id, publicKeyHash);
     }
 
     private void transfer(String destinationId, int amount) {
@@ -34,7 +36,7 @@ public class Client {
         //clientService.transfer(destinationId,amount);
     }
 
-    public void cli(String id) {
+    public void cli(String id, String publicKeyHash) {
             Scanner scanner = new Scanner(System.in);
             boolean running = true;
     
@@ -55,7 +57,7 @@ public class Client {
                         appendMessage(message,id);
                         break;
                     case 2:
-                        check_balance(id);
+                        check_balance(id, publicKeyHash);
                         break;
                     case 3:
                         System.out.print("Enter the destination: ");
@@ -86,14 +88,23 @@ public class Client {
         ProcessConfig[] nodeConfigs = new ProcessConfigBuilder().fromFile(nodesConfigPath);
         ProcessConfig nodeConfig = Arrays.stream(nodeConfigs).filter(c -> c.getId().equals(id)).findAny().get();
 
+
         // Abstraction to send and receive messages
         Link linkToNodes = new Link(nodeConfig, private_key_path, nodeConfig.getPort(), nodeConfigs,
                 ConsensusMessage.class);
         
-        ClientService clientService = new ClientService(linkToNodes, private_key_path);
+        ClientService clientService = new ClientService(linkToNodes, private_key_path, nodeConfigs);
         Client client = new Client(clientService);
 
+        String publicKey = CryptSignature.loadPublicKey(nodeConfig.getPublicKey());
+        String publicKeyHash = "";
+        try{
+            publicKeyHash = CryptSignature.hashPublicKey(publicKey);
+        }catch(NoSuchAlgorithmException e){
+            e.printStackTrace();
+        }
+
         // Start CLI
-        client.cli(id);
+        client.cli(id,publicKeyHash);
     }
 }

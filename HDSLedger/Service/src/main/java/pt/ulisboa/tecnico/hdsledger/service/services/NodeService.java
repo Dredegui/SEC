@@ -1,8 +1,12 @@
 package pt.ulisboa.tecnico.hdsledger.service.services;
 
 import java.io.IOException;
+import java.nio.file.Files;
+import java.nio.file.Paths;
+import java.security.NoSuchAlgorithmException;
 import java.text.MessageFormat;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.Collection;
 import java.util.Map;
 import java.util.Optional;
@@ -92,6 +96,17 @@ public class NodeService implements UDPService {
             if (!nodesConfig[i].getId().contains("client")) {
                 nodeCount++;
             }
+            else {
+                try{
+
+                    String publicKey = CryptSignature.loadPublicKey(nodesConfig[i].getPublicKey());
+                    String publicKeyHash = CryptSignature.hashPublicKey(publicKey);
+                    accounts.put(publicKeyHash, new Account(publicKeyHash));
+
+                } catch (NoSuchAlgorithmException e) {
+                    e.printStackTrace();
+                }
+            }
         }
         this.prepareMessages = new MessageBucket(nodeCount);
         this.commitMessages = new MessageBucket(nodeCount);
@@ -121,10 +136,6 @@ public class NodeService implements UDPService {
             nodesConfig[i - 1].updateLeader(round);
         }
         config.updateLeader(round);
-    }
-
-    public void addAccount(Account account) {
-        accounts.put(account.getPublicKey(), account);
     }
 
     public boolean isLeader(String id) {
@@ -383,21 +394,24 @@ public class NodeService implements UDPService {
     public void uponCheckBalance(ConsensusMessage message){
         CheckBalanceMessage checkBalanceMessage = message.deserializeCheckBalanceMessage();
 
-        Account account = accounts.get(checkBalanceMessage.getPublicKey());
-        System.out.println("CheckBalanceMessage: " + checkBalanceMessage.getPublicKey());
+        Account account = accounts.get(checkBalanceMessage.getPublicKeyHash());
 
-       if (account!=null) { 
-            double balance = account.getBalance();
+        String senderId = message.getSenderId();
 
-            CheckBalanceMessage reply = new CheckBalanceMessage(balance, checkBalanceMessage.getPublicKey());
+        if (account!=null) { 
+
+            double autorizedBalance = account.getAutorizedBalance();
+            double contablisticBalance = account.getContablisticBalance();
+
+            CheckBalanceMessage reply = new CheckBalanceMessage(autorizedBalance, contablisticBalance);
 
             ConsensusMessage consensusMessage = new ConsensusMessageBuilder(config.getId(), Message.Type.CHECK_BALANCE)
                     .setMessage(reply.toJson())
+                    .setReplyTo(senderId)
                     .build();
 
-            link.send(message.getSenderId(), consensusMessage);
-       }
-
+            link.send(senderId, consensusMessage);
+        }
 
     }
     

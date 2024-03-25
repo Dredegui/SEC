@@ -4,33 +4,54 @@ import com.google.gson.Gson;
 
 public class CheckBalanceMessage {
 
-    double balance;
+    double autorizedBalance;
+    double contablisticBalance;
 
-    private String publicKey;
+    private String publicKeyHash;
+
+
 
     // Constructor used by client
-    public CheckBalanceMessage() {
-        this.balance = -1;
+    public CheckBalanceMessage(String publicKeyHash) {
+        this.autorizedBalance = -1;
+        this.contablisticBalance = -1;
+        this.publicKeyHash = publicKeyHash;
     }
 
     // Constructor used by server
-    public CheckBalanceMessage(double balance, String publicKey){
-        this.balance = balance;
-        this.publicKey = publicKey;
+    public CheckBalanceMessage(double autorizedBalance, double contablisticBalance) {
+        this.autorizedBalance = autorizedBalance;
+        this.contablisticBalance = contablisticBalance;
+
     }
 
-    public double getBalance(){
-        return this.balance;
+    public String getPublicKeyHash() {
+        return this.publicKeyHash;
     }
 
-    public void setBalance(double balance) {
-        this.balance = balance;
+    public void setPublicKeyHash(String publicKeyHash) {
+        this.publicKeyHash = publicKeyHash;
     }
 
-    public String getPublicKey() {
-        return this.publicKey;
+    public double getAutorizedBalance(){
+        return this.autorizedBalance;
     }
-    
+
+
+
+    public void setAutorizedBalance(double autorizedBalance) {
+        this.autorizedBalance = autorizedBalance;
+    }
+
+    public double getContablisticBalance(){
+        return this.contablisticBalance;
+    }
+
+    public void setContablisticBalance(double contablisticBalance) {
+        this.contablisticBalance = contablisticBalance;
+    }
+
+
     public String toJson() {
         return new Gson().toJson(this);
     }

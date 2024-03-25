@@ -246,6 +246,10 @@ public class Link {
         }
 
         switch (message.getType()) {
+            
+            case CHECK_BALANCE ->{
+                //return message;
+            }
             case APPEND -> { // Client -> Server -> Client
                 //return message;
             }
