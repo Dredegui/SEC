@@ -1,8 +1,11 @@
 package pt.ulisboa.tecnico.hdsledger.utilities;
 
+import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Paths;
 import java.security.KeyFactory;
+import java.security.MessageDigest;
+import java.security.NoSuchAlgorithmException;
 import java.security.PrivateKey;
 import java.security.PublicKey;
 import java.security.spec.PKCS8EncodedKeySpec;
@@ -13,6 +16,37 @@ import java.util.Base64;
 public class CryptSignature {
 
     public CryptSignature() {
+    }
+
+    public static String loadPublicKey(String publicKeyPath) {
+        try {
+            // Read all bytes from the path
+            byte[] keyBytes = Files.readAllBytes(Paths.get(publicKeyPath));
+            // Convert to a string, assuming the key is encoded in a standard format
+            // remove the header, footer and newlines from key
+            String uKey = new String(keyBytes);
+            uKey = uKey.replace("-----BEGIN PUBLIC KEY-----", "");
+            uKey = uKey.replace("-----END PUBLIC KEY-----", "");
+            uKey = uKey.replaceAll("\\s+", "");
+
+            return uKey;
+        } catch (IOException e) {
+            e.printStackTrace();
+            return null; // Or handle error appropriately
+        }
+    }
+
+    public static String hashPublicKey(String publicKeyString) throws NoSuchAlgorithmException {
+
+        byte[] publicKeyBytes = Base64.getDecoder().decode(publicKeyString);
+
+        MessageDigest digest = MessageDigest.getInstance("SHA-256");
+
+        byte[] hashBytes = digest.digest(publicKeyBytes);
+
+        String hashBase64 = Base64.getEncoder().encodeToString(hashBytes);
+        
+        return hashBase64;
     }
     
     public static PublicKey getPublicKey(String publicKeyPath) {
