@@ -8,6 +8,7 @@ import pt.ulisboa.tecnico.hdsledger.utilities.ProcessConfigBuilder;
 import pt.ulisboa.tecnico.hdsledger.communication.Link;
 
 import java.util.Scanner;
+import java.security.NoSuchAlgorithmException;
 import java.util.Arrays;
 
 public class Client {
@@ -26,8 +27,8 @@ public class Client {
         clientService.append(message, id);
     }
 
-    private void check_balance(String id){
-        clientService.check_balance(id);
+    private void check_balance(String id, String publicKeyHash){
+        clientService.check_balance(id, publicKeyHash);
     }
 
     private void transfer(String destinationId, int amount) {
@@ -35,7 +36,7 @@ public class Client {
         //clientService.transfer(destinationId,amount);
     }
 
-    public void cli(String id) {
+    public void cli(String id, String publicKeyHash) {
             Scanner scanner = new Scanner(System.in);
             boolean running = true;
     
@@ -56,7 +57,7 @@ public class Client {
                         appendMessage(message,id);
                         break;
                     case 2:
-                        check_balance(id);
+                        check_balance(id, publicKeyHash);
                         break;
                     case 3:
                         System.out.print("Enter the destination: ");
@@ -95,7 +96,15 @@ public class Client {
         ClientService clientService = new ClientService(linkToNodes, private_key_path);
         Client client = new Client(clientService);
 
+        String publicKey = CryptSignature.loadPublicKey(nodeConfig.getPublicKey());
+        String publicKeyHash = "";
+        try{
+            publicKeyHash = CryptSignature.hashPublicKey(publicKey);
+        }catch(NoSuchAlgorithmException e){
+            e.printStackTrace();
+        }
+
         // Start CLI
-        client.cli(id);
+        client.cli(id,publicKeyHash);
     }
 }

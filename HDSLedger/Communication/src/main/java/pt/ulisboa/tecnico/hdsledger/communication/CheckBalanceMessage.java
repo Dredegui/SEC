@@ -7,11 +7,15 @@ public class CheckBalanceMessage {
     double autorizedBalance;
     double contablisticBalance;
 
+    private String publicKeyHash;
+
+
 
     // Constructor used by client
-    public CheckBalanceMessage() {
+    public CheckBalanceMessage(String publicKeyHash) {
         this.autorizedBalance = -1;
         this.contablisticBalance = -1;
+        this.publicKeyHash = publicKeyHash;
     }
 
     // Constructor used by server
@@ -19,6 +23,14 @@ public class CheckBalanceMessage {
         this.autorizedBalance = autorizedBalance;
         this.contablisticBalance = contablisticBalance;
 
+    }
+
+    public String getPublicKeyHash() {
+        return this.publicKeyHash;
+    }
+
+    public void setPublicKeyHash(String publicKeyHash) {
+        this.publicKeyHash = publicKeyHash;
     }
 
     public double getAutorizedBalance(){
