@@ -31,9 +31,20 @@ public class Client {
         clientService.check_balance(id, publicKeyHash);
     }
 
-    private void transfer(String destinationId, int amount) {
+    private void transfer(String destinationId, double amount) {
+       
+        String destinationPublicKeyPath = "src/main/resources/publicKeys/" + destinationId + "Public.key";
+        String destinationPublicKey = CryptSignature.loadPublicKey(destinationPublicKeyPath);
+        String destinationPublicKeyHash = "";
+        try{
+            destinationPublicKeyHash = CryptSignature.hashPublicKey(destinationPublicKey);
+        }catch(NoSuchAlgorithmException e){ 
+            e.printStackTrace();
+        }
+
+        clientService.transfer(destinationPublicKeyHash,amount);
+
         System.out.println("Transfering " + amount + " to " + destinationId);
-        //clientService.transfer(destinationId,amount);
     }
 
     public void cli(String id, String publicKeyHash) {
@@ -41,6 +52,7 @@ public class Client {
             boolean running = true;
     
             while (running) {
+                System.out.println("Welcome to the HDSLedger " + id + " !");
                 System.out.println("Choose an option:");
                 System.out.println("1. Append message to the chain");
                 System.out.println("2. Check account balance");
@@ -60,11 +72,12 @@ public class Client {
                         check_balance(id, publicKeyHash);
                         break;
                     case 3:
-                        System.out.print("Enter the destination: ");
-                        String destinationId = scanner.nextLine();
-                        System.out.print("Enter the amount to transfer: ");
-                        int amount = scanner.nextInt();
-                        transfer(destinationId,amount);
+                    System.out.print("Enter the destination (client id): ");
+                    String destinationId = scanner.nextLine();
+                    System.out.print("Enter the amount to transfer: ");
+                    double amount = scanner.nextDouble();
+                    
+                    transfer(destinationId,amount);
                         break;
                     case 5:
                         running = false;

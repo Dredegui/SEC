@@ -75,6 +75,10 @@ public class ClientService {
 
     }
 
+    public void transfer(String destinationPublicKeyHash, double amount) {
+        // TODO
+    }
+
     public void listenConfirmation() {
         
         try {
