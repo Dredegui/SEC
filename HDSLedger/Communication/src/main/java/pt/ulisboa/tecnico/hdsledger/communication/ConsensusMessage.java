@@ -1,5 +1,7 @@
 package pt.ulisboa.tecnico.hdsledger.communication;
 
+import javax.swing.TransferHandler.TransferSupport;
+
 import com.google.gson.Gson;
 
 public class ConsensusMessage extends Message {
@@ -23,6 +25,10 @@ public class ConsensusMessage extends Message {
 
     public ConsensusMessage(String senderId, Type type) {
         super(senderId, type);
+    }
+
+    public TransferMessage deserializeTransferMessage() {
+        return new Gson().fromJson(this.message, TransferMessage.class);
     }
 
     public CheckBalanceMessage deserializeCheckBalanceMessage() {
