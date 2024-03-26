@@ -6,6 +6,7 @@ import java.util.List;
 public class BlockChain {
     private List<Block> chain;
     private List<Transaction> currentTransactions;
+    private int numberOfTransactionsPerBlock = 3;
     
     public BlockChain() {
         chain = new ArrayList<>();
@@ -21,8 +22,8 @@ public class BlockChain {
     }
     
     
-    public void addTransaction(String sender, String receiver, double amount) {
-        currentTransactions.add(new Transaction(sender, receiver, amount));
+    public void addTransaction(String sender, String receiver, double amount, byte[] senderSignature, int nonce) {
+        currentTransactions.add(new Transaction(sender, receiver, amount, senderSignature, nonce));
     }
 
     public List<Block> getChain() {
@@ -35,6 +36,10 @@ public class BlockChain {
 
     public Block getLastBlock() {
         return chain.get(chain.size() - 1);
+    }
+
+    public boolean isReadyToProcessTransactions() {
+        return currentTransactions.size() >= numberOfTransactionsPerBlock;
     }
 
 
