@@ -1,7 +1,9 @@
 package pt.ulisboa.tecnico.hdsledger.client.services;
 
 import java.io.IOException;
+import java.util.HashSet;
 import java.util.Optional;
+import java.util.Set;
 
 import com.google.gson.Gson;
 
@@ -29,6 +31,8 @@ public class ClientService {
 
     private final MessageBucket checkBalanceMessages;
 
+    private int totalNodes;
+
     public ClientService(Link link, String privateKeyPath, ProcessConfig[] nodesConfig) {
         this.link = link;
         this.privateKey = privateKeyPath;
@@ -39,7 +43,7 @@ public class ClientService {
                 nodeCount++;
             }
         }
-        
+        this.totalNodes = nodeCount;
         try {
             nonce = 0;
         } catch (Exception e) {
@@ -100,36 +104,47 @@ public class ClientService {
 
     public void listenBalance() {
         try {
-            boolean listen = true;
-            while (listen) {
+            Set<String> respondedNodes = new HashSet<>();
+            boolean quorumReached = false;
+            
+            while (respondedNodes.size() < totalNodes) {
                 Message message = link.receive();
                 if (message.getType() == Message.Type.CHECK_BALANCE) {
                     ConsensusMessage consensusMessage = ((ConsensusMessage) message);
                     CheckBalanceMessage checkBalanceMessage = consensusMessage.deserializeCheckBalanceMessage();
 
-                    // Add the message to your collection
+                    // Adicione a identificação do nó à lista de nós que responderam
+                    respondedNodes.add(consensusMessage.getSenderId()); // Presumindo que cada mensagem possa ser identificada de forma única
+
+                    // Adicione a mensagem à sua coleção
                     checkBalanceMessages.addCheckBalanceMessage(checkBalanceMessage);
 
-                    // Now, check for a quorum
-                    Optional<Double[]> quorumResult = checkBalanceMessages.hasValidCheckBalanceQuorum();
-                    if (quorumResult.isPresent()) {
-                        // Quorum is present, extract the balances from the Optional
-                        Double[] balances = quorumResult.get();
-                        Double authorizedBalance = balances[0];
-                        Double contabilisticBalance = balances[1];
+                    // Verifique se um quórum foi alcançado sem interromper a escuta
+                    if (!quorumReached) {
+                        Optional<Double[]> quorumResult = checkBalanceMessages.hasValidCheckBalanceQuorum();
+                        if (quorumResult.isPresent()) {
+                            quorumReached = true;
+                            // O quórum está presente, extraia os saldos do Optional
+                            Double[] balances = quorumResult.get();
+                            Double authorizedBalance = balances[0];
+                            Double contabilisticBalance = balances[1];
 
-                        // Output the quorum balances
-                        System.out.println("Quorum reached.");
-                        System.out.println("Your authorized balance is: " + authorizedBalance);
-                        System.out.println("Your contabilistic balance is: " + contabilisticBalance);
+                            // Saída dos saldos do quórum
+                            System.out.println("Quorum reached.");
+                            System.out.println("Your authorized balance is: " + authorizedBalance);
+                            System.out.println("Your contabilistic balance is: " + contabilisticBalance);
+                        }
+                    }
 
-                        listen = false; // Stop listening as quorum is achieved
-                    } else {
-                        // Output a message indicating you're waiting for a quorum
+                    // Continue a saída para esperar pelo quórum se ainda não tiver sido alcançado
+                    if (!quorumReached) {
                         System.out.println("Waiting for a quorum...");
                     }
                 }
             }
+
+            // Todos os nós responderam
+            System.out.println("All nodes have responded.");
         } catch (IOException | ClassNotFoundException e) {
             e.printStackTrace();
         }
