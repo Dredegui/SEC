@@ -7,25 +7,25 @@ public class TransferMessage {
     // Source public key hash
     private String source;
     // Destiny public key hash
-    private String destination;
+    private String destiny;
     private double amount;
     private byte[] signature;
     private int nonce;
 
-    public TransferMessage(String source, String destination, double amount, byte[] signature) {
+    public TransferMessage(String source, String destiny, double amount, byte[] signature, int nonce) {
         this.source = source;
-        this.destination = destination;
+        this.destiny = destiny;
         this.amount = amount;
         this.signature = signature;
-        this.nonce = 0;
+        this.nonce = nonce;
     }
 
     public String getSource() {
         return source;
     }
 
-    public String getDestination() {
-        return destination;
+    public String getDestiny() {
+        return destiny;
     }
 
     public double getAmount() {
