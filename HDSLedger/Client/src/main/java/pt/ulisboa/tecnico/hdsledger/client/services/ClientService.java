@@ -71,10 +71,10 @@ public class ClientService {
 
         ConsensusMessage consensusMessage = new ConsensusMessage(id, Message.Type.TRANSFER);
         nonce++;
-        byte[] dataNonce = (sourcePublicKeyHash + destinyPublicKeyHash + amount + nonce).getBytes();
-        byte[] signature = CryptSignature.sign(dataNonce, privateKey);
+        byte[] data = (sourcePublicKeyHash + destinyPublicKeyHash + amount + nonce).getBytes();
+        byte[] signature = CryptSignature.sign(data, privateKey);
 
-        consensusMessage.setMessage(new TransferMessage(sourcePublicKeyHash, destinyPublicKeyHash, amount, signature).toJson());
+        consensusMessage.setMessage(new TransferMessage(sourcePublicKeyHash, destinyPublicKeyHash, amount, signature, nonce).toJson());
 
         this.link.broadcast(consensusMessage);
 
@@ -100,8 +100,6 @@ public class ClientService {
         }
         
     }
-
-
 
     public void listenBalance() {
         try {
