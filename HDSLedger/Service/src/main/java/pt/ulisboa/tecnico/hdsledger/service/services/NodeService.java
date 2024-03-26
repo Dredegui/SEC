@@ -29,6 +29,7 @@ import pt.ulisboa.tecnico.hdsledger.communication.Message;
 import pt.ulisboa.tecnico.hdsledger.communication.PrePrepareMessage;
 import pt.ulisboa.tecnico.hdsledger.communication.PrepareMessage;
 import pt.ulisboa.tecnico.hdsledger.communication.RoundChangeMessage;
+import pt.ulisboa.tecnico.hdsledger.communication.TransferMessage;
 import pt.ulisboa.tecnico.hdsledger.communication.builder.ConsensusMessageBuilder;
 import pt.ulisboa.tecnico.hdsledger.service.models.Account;
 import pt.ulisboa.tecnico.hdsledger.service.models.BlockChain;
@@ -129,6 +130,10 @@ public class NodeService implements UDPService {
 
     public ArrayList<String> getLedger() {
         return this.ledger;
+    }
+
+    public BlockChain getBlockChain() {
+        return this.blockChain;
     }
 
     private void updateAllLeader(int round) {
@@ -414,6 +419,52 @@ public class NodeService implements UDPService {
         }
 
     }
+
+    public void uponTransfer(ConsensusMessage message) {
+        
+        TransferMessage transferMessage = message.deserializeTransferMessage();
+
+        String source = transferMessage.getSource();
+        String destiny = transferMessage.getDestiny();
+        double amount = transferMessage.getAmount();
+        int nonce = transferMessage.getNonce();
+
+        byte [] dataReceived = (source + destiny + amount + nonce).getBytes();
+        byte [] signature = transferMessage.getSignature();
+        // verify signature of data received
+        // to do
+
+        Account senderAccount = accounts.get(source);
+        if (senderAccount != null) {
+            System.out.println("Sender account: " + senderAccount.getPublicKeyHash());
+        }
+
+        Account receiverAccount = accounts.get(destiny);
+        if (receiverAccount==null) {
+            // send to the client a message saying that the transfer was not possible
+            // because wrong destiny account
+            // to do
+        }
+        System.out.println("Receiver account: " + receiverAccount.getPublicKeyHash());
+
+        if (!senderAccount.hasEnoughAutorizedBalance(amount)) {
+            // send to the client a message saying that the transfer was not possible
+            // to do
+        }
+
+        else {
+            // add the transaction to the list of current transactions
+            blockChain.addTransaction(senderAccount.getPublicKeyHash(), receiverAccount.getPublicKeyHash(), amount, signature, nonce);
+
+            if(blockChain.isReadyToProcessTransactions()) {
+
+                // modify the startConsensus method to accept a list of transactions
+                // startConsensus(blockChain.getCurrentTransactions(), message.getNonce(), message.getSignature(), message.getClientId());
+                
+            }
+        }
+        
+    }
     
 
     /*
@@ -689,6 +740,9 @@ public class NodeService implements UDPService {
                         new Thread(() -> {
 
                             switch (message.getType()) {
+
+                                case TRANSFER ->
+                                    uponTransfer((ConsensusMessage) message);
 
                                 case CHECK_BALANCE ->
                                     uponCheckBalance((ConsensusMessage) message);
