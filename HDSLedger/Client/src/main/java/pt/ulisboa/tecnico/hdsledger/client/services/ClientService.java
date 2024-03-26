@@ -160,4 +160,29 @@ public class ClientService {
         }
     }
 
+    public void listenTranfer() {
+        try {
+            boolean listen = true;
+            while (listen) {
+                Message message = link.receive();
+                if (message.getType() == Message.Type.CONFIRMATION) {
+                    ConsensusMessage consensusMessage = ((ConsensusMessage) message);
+                    ConfirmationMessage confirmationMessage = consensusMessage.deserializeConfirmationMessage();
+                    if (confirmationMessage.getLedgerMessageLocation() == -1) {
+                        System.out.println("Transfer failed: Invalid destiny account");
+                    }
+                    else if (confirmationMessage.getLedgerMessageLocation() == -2) {
+                        System.out.println("Transfer failed: Insufficient funds");
+                    }
+                    else {
+                        System.out.println("Transfer completed successfully.");
+                    }
+                    listen = false;
+                }
+            }
+        } catch (IOException | ClassNotFoundException e) {
+            e.printStackTrace();
+        }
+    }
+
 }
