@@ -1,6 +1,7 @@
 package pt.ulisboa.tecnico.hdsledger.service.services;
 
 import java.io.IOException;
+import java.io.StringReader;
 import java.nio.file.Files;
 import java.nio.file.Paths;
 import java.security.NoSuchAlgorithmException;
@@ -79,6 +80,10 @@ public class NodeService implements UDPService {
 
     // Account map (public key -> account)
     private Map<String, Account> accounts = new ConcurrentHashMap<>();
+
+    // Nonce map (clientId -> nonce)
+    private Map<String, Integer> nonces = new ConcurrentHashMap<>();
+
 
     private Timer timer;
     
@@ -161,14 +166,7 @@ public class NodeService implements UDPService {
         return consensusMessage;
     }
 
-    // Validate AppendMessage signature
-    public boolean validateMessageClientSignature(ConsensusMessage consensusMessage, String value) {
-        if (value == null) {
-            return true;
-        }
-        int nonce = consensusMessage.getNonce();
-        byte[] signature = consensusMessage.getSignature();
-        String clientId = consensusMessage.getClientId();
+    public boolean validateClientSignature(String value, int nonce, byte[] signature, String clientId) {
         byte[] data = (value + nonce).getBytes();
         String publicKey = null;
         // Print all information
@@ -180,6 +178,7 @@ public class NodeService implements UDPService {
         }
         return CryptSignature.validate(data, signature, publicKey);
     }
+
 
     public ConsensusMessage createRoundChange(int instance, int round, int preparedRound, String preparedValue) {
         RoundChangeMessage roundChangeMessage = new RoundChangeMessage(preparedRound, preparedValue);
@@ -292,7 +291,8 @@ public class NodeService implements UDPService {
                         "{0} - Received ROUND-CHANGE message from {1} Consensus Instance {2}, Round {3}",
                         config.getId(), senderId, consensusInstance, round));
         RoundChangeMessage roundChangeMessage = message.deserializeRoundChangeMessage();
-        if (!validateMessageClientSignature(message, roundChangeMessage.getPreparedValue())) {
+        String preparedValue = roundChangeMessage.getPreparedValue();
+        if (preparedValue != null && !validateClientSignature(preparedValue, message.getNonce(), message.getSignature(), message.getClientId())) {
             LOGGER.log(Level.WARNING, MessageFormat.format("{0} - RoundChange Message value doesn't match signature from client {1}", config.getId(), message.getClientId()));
             return;
         }
@@ -443,13 +443,17 @@ public class NodeService implements UDPService {
         if (receiverAccount==null) {
             // send to the client a message saying that the transfer was not possible
             // because wrong destiny account
-            // to do
+            this.link.send(message.getSenderId(), new ConsensusMessageBuilder(this.config.getId(), Message.Type.CONFIRMATION)
+                    .setMessage(new ConfirmationMessage(-1).toJson())
+                    .build());
         }
         System.out.println("Receiver account: " + receiverAccount.getPublicKeyHash());
 
         if (!senderAccount.hasEnoughAutorizedBalance(amount)) {
             // send to the client a message saying that the transfer was not possible
-            // to do
+            this.link.send(message.getSenderId(), new ConsensusMessageBuilder(this.config.getId(), Message.Type.CONFIRMATION)
+                    .setMessage(new ConfirmationMessage(-2).toJson())
+                    .build());
         }
 
         else {
@@ -478,6 +482,21 @@ public class NodeService implements UDPService {
         AppendMessage appendMessage = message.deserializeAppendMessage();
 
         String value = appendMessage.getValue();
+        if (!validateClientSignature(value, appendMessage.getNonce(), appendMessage.getSignature(), message.getSenderId())) {
+            LOGGER.log(Level.WARNING, MessageFormat.format("{0} - Append Message value doesn't match signature from client {1}", config.getId(), message.getSenderId()));
+            return;
+        }
+        if (!nonces.containsKey(message.getSenderId())) {
+            nonces.put(message.getSenderId(), 0);
+        }
+        if (appendMessage.getNonce() <= nonces.get(message.getSenderId()) || appendMessage.getNonce() > nonces.get(message.getSenderId()) + 1) {
+            LOGGER.log(Level.WARNING, MessageFormat.format("{0} - Nonce isn't valid", config.getId()));
+            return;
+        } else {
+            nonces.put(message.getSenderId(), appendMessage.getNonce());
+        }
+
+
         LOGGER.log(Level.INFO, MessageFormat.format("{0} - Received APPEND message: {1}", config.getId(), value));
         System.out.println("Received APPEND message: " + value + " from " + message.getSenderId() + " with nonce " + appendMessage.getNonce() + " and signature " + appendMessage.getSignature());
         startConsensus(value, appendMessage.getNonce(), appendMessage.getSignature(), message.getSenderId());
@@ -498,7 +517,7 @@ public class NodeService implements UDPService {
         int senderMessageId = message.getMessageId();
         PrePrepareMessage prePrepareMessage = message.deserializePrePrepareMessage();
         String value = prePrepareMessage.getValue();
-        if (!validateMessageClientSignature(message, value)) {
+        if (!validateClientSignature(value, message.getNonce(), message.getSignature(), message.getClientId())) {
             LOGGER.log(Level.WARNING, MessageFormat.format("{0} - PrePrepare Message value doesn't match signature from client {1}", config.getId(), message.getClientId()));
             return;
         }
@@ -562,7 +581,7 @@ public class NodeService implements UDPService {
         PrepareMessage prepareMessage = message.deserializePrepareMessage();
 
         String value = prepareMessage.getValue();
-        if (!validateMessageClientSignature(message, value)) {
+        if (!validateClientSignature(value, message.getNonce(), message.getSignature(), message.getClientId())) {
             LOGGER.log(Level.WARNING, MessageFormat.format("{0} - Prepare Message value doesn't match signature from client {1}", config.getId(), message.getClientId()));
             return;
         }
@@ -647,7 +666,7 @@ public class NodeService implements UDPService {
         LOGGER.log(Level.INFO,
                 MessageFormat.format("{0} - Received COMMIT message from {1}: Consensus Instance {2}, Round {3}",
                         config.getId(), message.getSenderId(), consensusInstance, round));
-        if (!validateMessageClientSignature(message, message.deserializeCommitMessage().getValue())) {
+        if (!validateClientSignature(message.deserializeCommitMessage().getValue(), message.getNonce(), message.getSignature(), message.getClientId())) {
             LOGGER.log(Level.WARNING, MessageFormat.format("{0} - Commit Message value doesn't match signature from client {1}", config.getId(), message.getClientId()));
             return;
         }
