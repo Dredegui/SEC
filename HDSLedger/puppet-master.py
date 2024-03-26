@@ -36,11 +36,7 @@ with open(f"Service/src/main/resources/{server_config}") as f:
             if "client" not in key['id']:
                 os.system(
                     f"{terminal} sh -c \"cd Service; mvn exec:java -Dexec.args='{key['id']} {private_key_path} {server_config}' ; sleep 500\"")
-            elif key['id'] == "client":
-                os.system(
-                    f"{terminal} sh -c \"cd Client; mvn exec:java -Dexec.args='{key['id']} {private_key_path}' ; sleep 500\""
-                )
-            elif key['id'] == "client1":
+            else:
                 os.system(
                     f"{terminal} sh -c \"cd Client; mvn exec:java -Dexec.args='{key['id']} {private_key_path}' ; sleep 500\""
                 )

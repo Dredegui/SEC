@@ -4,12 +4,10 @@ import com.google.gson.Gson;
 
 public class CheckBalanceMessage {
 
-    double autorizedBalance;
-    double contablisticBalance;
+    private double autorizedBalance;
+    private double contablisticBalance;
 
     private String publicKeyHash;
-
-
 
     // Constructor used by client
     public CheckBalanceMessage(String publicKeyHash) {
@@ -36,8 +34,6 @@ public class CheckBalanceMessage {
     public double getAutorizedBalance(){
         return this.autorizedBalance;
     }
-
-
 
     public void setAutorizedBalance(double autorizedBalance) {
         this.autorizedBalance = autorizedBalance;

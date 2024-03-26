@@ -2,6 +2,7 @@ package pt.ulisboa.tecnico.hdsledger.service.models;
 
 
 import pt.ulisboa.tecnico.hdsledger.communication.CommitMessage;
+import pt.ulisboa.tecnico.hdsledger.communication.Message;
 
 public class InstanceInfo {
 
@@ -12,6 +13,8 @@ public class InstanceInfo {
     private String inputValue;
     private int committedRound = -1;
     private String senderId = null;
+    private int nonce;
+    private byte[] signature;
 
     public InstanceInfo(String inputValue) {
         this.inputValue = inputValue;
@@ -72,4 +75,21 @@ public class InstanceInfo {
     public void setCommitMessage(CommitMessage commitMessage) {
         this.commitMessage = commitMessage;
     }
+
+    public int getNonce() {
+        return nonce;
+    }
+
+    public void setNonce(int nonce) {
+        this.nonce = nonce;
+    }
+
+    public byte[] getSignature() {
+        return signature;
+    }
+
+    public void setSignature(byte[] signature) {
+        this.signature = signature;
+    }
+
 }

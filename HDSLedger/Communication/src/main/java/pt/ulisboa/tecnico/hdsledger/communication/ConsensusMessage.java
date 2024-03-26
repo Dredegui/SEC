@@ -1,5 +1,7 @@
 package pt.ulisboa.tecnico.hdsledger.communication;
 
+import javax.swing.TransferHandler.TransferSupport;
+
 import com.google.gson.Gson;
 
 public class ConsensusMessage extends Message {
@@ -14,11 +16,19 @@ public class ConsensusMessage extends Message {
     private int replyToMessageId;
     // Message (PREPREPARE, PREPARE, COMMIT, CHECK_BALANCE, APPEND, TRANSFER, CONFIRMATION)
     private String message;
-    // Append message that client sent
-    private Message appendMessage;
+    // nonce from client
+    private int nonce;
+    // data signed by client
+    private byte[] signature;
+    // client id
+    private String clientId;
 
     public ConsensusMessage(String senderId, Type type) {
         super(senderId, type);
+    }
+
+    public TransferMessage deserializeTransferMessage() {
+        return new Gson().fromJson(this.message, TransferMessage.class);
     }
 
     public CheckBalanceMessage deserializeCheckBalanceMessage() {
@@ -57,12 +67,28 @@ public class ConsensusMessage extends Message {
         this.message = message;
     }
 
-    public Message getAppendMessage() {
-        return appendMessage;
+    public int getNonce() {
+        return nonce;
     }
 
-    public void setAppendMessage(Message appendMessage) {
-        this.appendMessage = appendMessage;
+    public void setNonce(int nonce) {
+        this.nonce = nonce;
+    }
+
+    public byte[] getSignature() {
+        return signature;
+    }
+
+    public void setSignature(byte[] signature) {
+        this.signature = signature;
+    }
+
+    public String getClientId() {
+        return clientId;
+    }
+
+    public void setClientId(String clientId) {
+        this.clientId = clientId;
     }
 
     public int getConsensusInstance() {

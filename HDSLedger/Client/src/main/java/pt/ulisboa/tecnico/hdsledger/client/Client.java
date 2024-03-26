@@ -31,15 +31,26 @@ public class Client {
         clientService.check_balance(id, publicKeyHash);
     }
 
-    private void transfer(String destinationId, int amount) {
-        System.out.println("Transfering " + amount + " to " + destinationId);
-        //clientService.transfer(destinationId,amount);
+    private void transfer(String sourceId, String sourcePublicKeyHash, String destinyId, double amount) {
+       
+        String destinyPublicKeyPath = "src/main/resources/publicKeys/" + destinyId + "Public.key";
+        String destinyPublicKey = CryptSignature.loadPublicKey(destinyPublicKeyPath);
+        String destinyPublicKeyHash = "";
+        try{
+            destinyPublicKeyHash = CryptSignature.hashPublicKey(destinyPublicKey);
+        }catch(NoSuchAlgorithmException e){ 
+            e.printStackTrace();
+        }
+
+        clientService.transfer(sourceId, sourcePublicKeyHash, destinyPublicKeyHash, amount);
+
+        System.out.println("Transfering " + amount + " to " + destinyId);
     }
 
     public void cli(String id, String publicKeyHash) {
             Scanner scanner = new Scanner(System.in);
             boolean running = true;
-    
+            System.out.println("Welcome to the HDSLedger " + id + " !");
             while (running) {
                 System.out.println("Choose an option:");
                 System.out.println("1. Append message to the chain");
@@ -60,11 +71,12 @@ public class Client {
                         check_balance(id, publicKeyHash);
                         break;
                     case 3:
-                        System.out.print("Enter the destination: ");
-                        String destinationId = scanner.nextLine();
-                        System.out.print("Enter the amount to transfer: ");
-                        int amount = scanner.nextInt();
-                        transfer(destinationId,amount);
+                    System.out.print("Enter the destination (client id): ");
+                    String destinationId = scanner.nextLine();
+                    System.out.print("Enter the amount to transfer: ");
+                    double amount = scanner.nextDouble();
+                    
+                    transfer(id,publicKeyHash,destinationId,amount);
                         break;
                     case 5:
                         running = false;

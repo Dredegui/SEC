@@ -3,18 +3,23 @@ package pt.ulisboa.tecnico.hdsledger.service.models;
 import java.util.UUID;
 
 public class Transaction {
+    // public key hash of the sender
     private String sender;
+    // public key hash of the receiver
     private String receiver;
     private double amount;
+    private byte[] senderSignature;
+    private int nonce;
     private String transactionId;
-    private long timestamp;
 
-    public Transaction(String sender, String receiver, double amount) {
+
+    public Transaction(String sender, String receiver, double amount, byte[] senderSignature, int nonce) {
         this.sender = sender;
         this.receiver = receiver;
         this.amount = amount;
+        this.senderSignature = senderSignature;
+        this.nonce = nonce;
         this.transactionId = UUID.randomUUID().toString();  // unique id
-        this.timestamp = System.currentTimeMillis(); 
     }
 
     public String getSender() {
@@ -45,7 +50,13 @@ public class Transaction {
         return transactionId;
     }
 
-    public long getTimestamp() {
-        return timestamp;
+    public int getNonce() {
+        return nonce;
     }
+
+    public byte[] getSenderSignature() {
+        return senderSignature;
+    }
+
+    
 }
