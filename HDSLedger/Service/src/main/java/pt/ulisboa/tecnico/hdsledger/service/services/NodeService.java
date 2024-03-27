@@ -37,10 +37,10 @@ import pt.ulisboa.tecnico.hdsledger.service.models.Account;
 import pt.ulisboa.tecnico.hdsledger.service.models.BlockChain;
 import pt.ulisboa.tecnico.hdsledger.service.models.InstanceInfo;
 import pt.ulisboa.tecnico.hdsledger.service.models.MessageBucket;
-import pt.ulisboa.tecnico.hdsledger.service.models.Transaction;
 import pt.ulisboa.tecnico.hdsledger.utilities.CryptSignature;
 import pt.ulisboa.tecnico.hdsledger.utilities.CustomLogger;
 import pt.ulisboa.tecnico.hdsledger.utilities.ProcessConfig;
+import pt.ulisboa.tecnico.hdsledger.utilities.Transaction;
 
 public class NodeService implements UDPService {
 

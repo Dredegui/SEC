@@ -2,6 +2,8 @@ package pt.ulisboa.tecnico.hdsledger.service.models;
 
 import java.util.List;
 
+import pt.ulisboa.tecnico.hdsledger.utilities.Transaction;
+
 public class Block {
     private List<Transaction> transactions;
     private final String previousHash; 

@@ -5,6 +5,7 @@ import java.util.List;
 
 import pt.ulisboa.tecnico.hdsledger.communication.CommitMessage;
 import pt.ulisboa.tecnico.hdsledger.communication.Message;
+import pt.ulisboa.tecnico.hdsledger.utilities.Transaction;
 
 public class InstanceInfo {
 

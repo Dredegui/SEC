@@ -4,7 +4,7 @@ import java.util.List;
 
 import com.google.gson.Gson;
 
-import pt.ulisboa.tecnico.hdsledger.service.models.Transaction;
+import pt.ulisboa.tecnico.hdsledger.utilities.Transaction;
 
 public class PrepareMessage {
     
