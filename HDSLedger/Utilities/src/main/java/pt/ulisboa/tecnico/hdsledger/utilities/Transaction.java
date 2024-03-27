@@ -2,6 +2,8 @@ package pt.ulisboa.tecnico.hdsledger.utilities;
 
 import java.util.UUID;
 
+import com.google.gson.Gson;
+
 public class Transaction {
     // public key hash of the sender
     private String sender;
@@ -58,5 +60,9 @@ public class Transaction {
         return senderSignature;
     }
 
+    public String toJson() {
+        return new Gson().toJson(this);
+    } 
+    
     
 }

@@ -2,6 +2,7 @@ package pt.ulisboa.tecnico.hdsledger.service.services;
 
 import java.io.IOException;
 import java.io.StringReader;
+import java.lang.reflect.Type;
 import java.nio.file.Files;
 import java.nio.file.Paths;
 import java.security.NoSuchAlgorithmException;
@@ -17,6 +18,9 @@ import java.util.concurrent.atomic.AtomicInteger;
 import java.util.logging.Level;
 
 import org.apache.commons.lang3.tuple.Pair;
+
+import com.google.gson.Gson;
+import com.google.gson.reflect.TypeToken;
 
 import java.util.Timer;
 import java.util.TimerTask;
@@ -154,8 +158,17 @@ public class NodeService implements UDPService {
         return nodesConfig[Integer.parseInt(id) - 1].isLeader();
     }
 
-    public ConsensusMessage createTransactionConsensusMessage(List<Transaction> curreTransactions, int instance, int round) {
-        PrePrepareMessage prePrepareMessage = new PrePrepareMessage(curreTransactions);
+    public List<Transaction> deserializeCurrentTransactions(String currentTransactionsString) {
+        Type transactionListType = new TypeToken<List<Transaction>>() {}.getType();
+        return new Gson().fromJson(currentTransactionsString, transactionListType);
+    }
+
+    public String serializeCurrentTransactions(List<Transaction> currentTransactions) {
+        return new Gson().toJson(currentTransactions);
+    }
+
+    public ConsensusMessage createTransactionConsensusMessage(String value, int instance, int round) {
+        PrePrepareMessage prePrepareMessage = new PrePrepareMessage(value);
 
         ConsensusMessage consensusMessage = new ConsensusMessageBuilder(config.getId(), Message.Type.PRE_PREPARE)
                 .setConsensusInstance(instance)
@@ -457,7 +470,7 @@ public class NodeService implements UDPService {
         if (this.config.isLeader()) {
             LOGGER.log(Level.INFO,
                 MessageFormat.format("{0} - Node is leader, sending PRE-PREPARE message", config.getId()));
-            this.link.broadcast(this.createTransactionConsensusMessage(currentTransactions, localConsensusInstance, instance.getCurrentRound()));
+            this.link.broadcast(this.createTransactionConsensusMessage(serializeCurrentTransactions(currentTransactions), localConsensusInstance, instance.getCurrentRound()));
         } else {
             LOGGER.log(Level.INFO,
                     MessageFormat.format("{0} - Node is not leader, waiting for PRE-PREPARE message", config.getId()));
@@ -569,7 +582,7 @@ public class NodeService implements UDPService {
         PrePrepareMessage prePrepareMessage = message.deserializePrePrepareMessage();
         List<Transaction> currentTransactions = prePrepareMessage.getTransactions();
 
-        // fazer for para verificar a assinatura para cada transação
+        // Validate transactions signatures -> assures they were not created by a byzantine
         if (!validateTransactions(currentTransactions)) {
             LOGGER.log(Level.WARNING, MessageFormat.format("{0} - PrePrepare Message value doesn't match signature from client {1}", config.getId(), message.getClientId()));
             return;
