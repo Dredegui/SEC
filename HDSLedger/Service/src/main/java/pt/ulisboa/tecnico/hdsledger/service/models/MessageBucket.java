@@ -1,6 +1,7 @@
 package pt.ulisboa.tecnico.hdsledger.service.models;
 
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 import java.util.concurrent.ConcurrentHashMap;
@@ -10,6 +11,7 @@ import org.apache.commons.lang3.tuple.Pair;
 
 import pt.ulisboa.tecnico.hdsledger.communication.CommitMessage;
 import pt.ulisboa.tecnico.hdsledger.communication.ConsensusMessage;
+import pt.ulisboa.tecnico.hdsledger.communication.Message;
 import pt.ulisboa.tecnico.hdsledger.communication.PrepareMessage;
 import pt.ulisboa.tecnico.hdsledger.communication.RoundChangeMessage;
 import pt.ulisboa.tecnico.hdsledger.utilities.CustomLogger;
@@ -128,6 +130,13 @@ public class MessageBucket {
         } else {
             return -1;
         }
+    }
+
+    public List<ConsensusMessage> findPreparedValueQuorum(int instance, int round, String preparedValue) {
+        return bucket.get(instance).get(round).values().stream().filter((message) -> {
+            PrepareMessage prepareMessage = message.deserializePrepareMessage();
+            return prepareMessage.getValue().equals(preparedValue);
+        }).toList();
     }
 
     // Helper function that returns a tuple (pr, pv) where pr and pv are, respectively, the prepared round and the prepared value of the ROUND-CHANGE message in Qrc with the highest prepared round

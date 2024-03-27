@@ -1,7 +1,5 @@
 package pt.ulisboa.tecnico.hdsledger.communication;
 
-import javax.swing.TransferHandler.TransferSupport;
-
 import com.google.gson.Gson;
 
 public class ConsensusMessage extends Message {

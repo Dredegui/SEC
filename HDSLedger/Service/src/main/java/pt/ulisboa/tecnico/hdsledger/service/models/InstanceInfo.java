@@ -1,6 +1,8 @@
 package pt.ulisboa.tecnico.hdsledger.service.models;
 
 
+import java.util.List;
+
 import pt.ulisboa.tecnico.hdsledger.communication.CommitMessage;
 import pt.ulisboa.tecnico.hdsledger.communication.Message;
 
@@ -15,9 +17,23 @@ public class InstanceInfo {
     private String senderId = null;
     private int nonce;
     private byte[] signature;
+    private List<Transaction> currentTransactions;
+
+    // Contructor for transactions
+    public InstanceInfo(List<Transaction> currentTransactions) {
+        this.currentTransactions = currentTransactions;
+    }
 
     public InstanceInfo(String inputValue) {
         this.inputValue = inputValue;
+    }
+
+    public List<Transaction> getCurrentTransactions() {
+         return this.currentTransactions;
+    }
+
+    public void setCurrentTransactions(List<Transaction> currentTransactions) {
+        this.currentTransactions = currentTransactions;
     }
 
     public String getSenderId() {

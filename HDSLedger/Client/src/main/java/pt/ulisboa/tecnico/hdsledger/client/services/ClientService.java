@@ -174,7 +174,7 @@ public class ClientService {
                     else if (confirmationMessage.getLedgerMessageLocation() == -2) {
                         System.out.println("Transfer failed: Insufficient funds");
                     }
-                    else {
+                    else if (confirmationMessage.getLedgerMessageLocation() == 1) {
                         System.out.println("Transfer completed successfully.");
                     }
                     listen = false;
