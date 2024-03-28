@@ -3,16 +3,19 @@ package pt.ulisboa.tecnico.hdsledger.service.models;
 import java.util.ArrayList;
 import java.util.List;
 
+import pt.ulisboa.tecnico.hdsledger.utilities.Append;
 import pt.ulisboa.tecnico.hdsledger.utilities.Transaction;
 
 public class BlockChain {
     private List<Block> chain;
     private List<Transaction> currentTransactions;
-    private int numberOfTransactionsPerBlock = 3;
+    private List<Append> listOfAppends;
+    private int numberOfTransactionsPerBlock = 1;
     
     public BlockChain() {
         chain = new ArrayList<>();
         currentTransactions = new ArrayList<>();
+        listOfAppends = new ArrayList<>();
         createBlock("0");
     }
     
@@ -20,9 +23,13 @@ public class BlockChain {
         Block block = new Block(currentTransactions, previousHash, 0, System.currentTimeMillis());
         this.chain.add(block);
         this.currentTransactions = new ArrayList<>();
+        this.listOfAppends = new ArrayList<>();
         return block;
     }
     
+    public void addAppend(String clientId, String value, byte[] senderSignature, int nonce) {
+        listOfAppends.add(new Append(clientId, value, senderSignature, nonce));
+    }
     
     public void addTransaction(String sender, String receiver, double amount, byte[] senderSignature, int nonce) {
         currentTransactions.add(new Transaction(sender, receiver, amount, senderSignature, nonce));
@@ -34,6 +41,10 @@ public class BlockChain {
 
     public List<Transaction> getCurrentTransactions() {
         return currentTransactions;
+    }
+
+    public List<Append> getListOfAppends() {
+        return listOfAppends;
     }
 
     public Block getLastBlock() {
