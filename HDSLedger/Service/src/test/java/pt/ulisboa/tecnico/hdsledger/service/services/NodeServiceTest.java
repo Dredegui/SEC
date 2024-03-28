@@ -4,8 +4,10 @@ import org.mockito.Mockito;
 import static org.junit.Assert.*;
 
 import java.text.MessageFormat;
+import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.HashMap;
+import java.util.List;
 
 import org.junit.Before;
 import org.junit.Test;
@@ -14,6 +16,7 @@ import org.junit.jupiter.api.parallel.ExecutionMode;
 
 import pt.ulisboa.tecnico.hdsledger.communication.ConsensusMessage;
 import pt.ulisboa.tecnico.hdsledger.communication.Link;
+import pt.ulisboa.tecnico.hdsledger.utilities.Append;
 import pt.ulisboa.tecnico.hdsledger.utilities.CryptSignature;
 import pt.ulisboa.tecnico.hdsledger.utilities.ProcessConfig;
 import pt.ulisboa.tecnico.hdsledger.utilities.ProcessConfigBuilder;
@@ -22,14 +25,11 @@ import pt.ulisboa.tecnico.hdsledger.utilities.ProcessConfigBuilder;
 public class NodeServiceTest {
 
     private NodeService nodeService;
-    private Link mockLink;
-    private ProcessConfig mockConfig;
-    private ProcessConfig mockLeaderConfig;
-    private ProcessConfig[] mockNodeConfigs;
 
     @Before
-    public void setUp() {
+    public void setUp() throws Exception{
         // Setup other mocks and configure mock behaviors as needed
+        
     }
 
     @Test
@@ -56,7 +56,6 @@ public class NodeServiceTest {
                 nodeConfig.isLeader(), nodeConfig.getPublicKey());
 
             System.out.println(log);
-
             // Abstraction to send and receive messages
             Link linkToNodes = new Link(nodeConfig, private_key_path, nodeConfig.getPort(), nodeConfigs,
                 ConsensusMessage.class);
@@ -82,9 +81,13 @@ public class NodeServiceTest {
         int nonce = 1;
         byte[] data = (value + nonce).getBytes();
         byte[] signature = CryptSignature.sign(data, "src/main/resources/privateKeys/rk_client.key");
+        Append append = new Append("client", value, signature, nonce);
+        List<Append> listOfAppends = new ArrayList<>();
+        listOfAppends.add(append);
+        String actualValue = nodeServices.get("1").serializeListOfAppends(listOfAppends);
         for (int i = 1; i <= 4; i++) {
             // TODO create append message
-            nodeServices.get(Integer.toString(i)).startConsensus(value, nonce, signature, "client");
+            nodeServices.get(Integer.toString(i)).startConsensus(actualValue);
         }
         // sleep for 3 seconds
         try {
@@ -96,18 +99,22 @@ public class NodeServiceTest {
         assertEquals(true, nodeServices.get("2").getConfig().isLeader());
         // get ledger from all nodeServices except 1 (it's byzantine)
         for (int i = 2; i <= 4; i++) {
-            assertEquals("ola", nodeServices.get(Integer.toString(i)).getLedger().get(0));
+            assertEquals(actualValue, nodeServices.get(Integer.toString(i)).getLedger().get(0));
         }
         value = "hello";
         nonce = 2;
         data = (value + nonce).getBytes();
         signature = CryptSignature.sign(data, "src/main/resources/privateKeys/rk_client.key");
+        Append append2 = new Append("client", value, signature, nonce);
+        listOfAppends.clear();
+        listOfAppends.add(append2);
+        actualValue = nodeServices.get("1").serializeListOfAppends(listOfAppends);
         // New lider is now 2
         for (int i = 2; i <= 4; i++) {
             // For testing effects of new consensus starting, we will not start consensus on node 1
             // Because it's byzantine and it didn't commit the last consensus because it only send messages to node 2
             // TODO create append message
-            nodeServices.get(Integer.toString(i)).startConsensus(value, nonce, signature, "client");
+            nodeServices.get(Integer.toString(i)).startConsensus(actualValue);
         }
 
         assertEquals(2, nodeServices.get("3").getConsensusInstance());
@@ -147,7 +154,6 @@ public class NodeServiceTest {
                 nodeConfig.isLeader(), nodeConfig.getPublicKey());
 
             System.out.println(log);
-
             // Abstraction to send and receive messages
             Link linkToNodes = new Link(nodeConfig, private_key_path, nodeConfig.getPort(), nodeConfigs,
                 ConsensusMessage.class);
@@ -169,9 +175,13 @@ public class NodeServiceTest {
         int nonce = 1;
         byte[] data = (value + nonce).getBytes();
         byte[] signature = CryptSignature.sign(data, "src/main/resources/privateKeys/rk_client.key");
+        Append append = new Append("client", value, signature, nonce);
+        List<Append> listOfAppends = new ArrayList<>();
+        listOfAppends.add(append);
+        String actualValue = nodeServices.get("1").serializeListOfAppends(listOfAppends);
         for (int i = 1; i <= 4; i++) {
             // TODO create append message
-            nodeServices.get(Integer.toString(i)).startConsensus(value, nonce, signature, "client");
+            nodeServices.get(Integer.toString(i)).startConsensus(actualValue);
         }
         // sleep for 7 seconds
         try {
@@ -181,14 +191,13 @@ public class NodeServiceTest {
         }
         // get ledger from all nodeServices except 4 (it's byzantine)
         for (int i = 1; i <= 3; i++) {
-            assertEquals("ola", nodeServices.get(Integer.toString(i)).getLedger().get(0));
+            assertEquals(actualValue, nodeServices.get(Integer.toString(i)).getLedger().get(0));
         }
         for (int i = 1; i <= 4; i++) {
             nodeServices.get(Integer.toString(i)).close();
         }
         Thread.getAllStackTraces().keySet().forEach(Thread::interrupt);
     }
-    
     
     @Test
     public void testTwoClients() {
@@ -215,7 +224,6 @@ public class NodeServiceTest {
                 nodeConfig.isLeader(), nodeConfig.getPublicKey());
 
             System.out.println(log);
-
             // Abstraction to send and receive messages
             Link linkToNodes = new Link(nodeConfig, private_key_path, nodeConfig.getPort(), nodeConfigs,
                 ConsensusMessage.class);
@@ -230,17 +238,25 @@ public class NodeServiceTest {
         byte[] dataC1 = (valueC1 + nonceC1).getBytes();
         byte[] signatureC1 = CryptSignature.sign(dataC1, "src/main/resources/privateKeys/rk_client.key");
         String valueC2 = "adeus";
+        Append append = new Append("client", valueC1, signatureC1, nonceC1);
+        List<Append> listOfAppends = new ArrayList<>();
+        listOfAppends.add(append);
+        String actualValue = nodeServices.get("1").serializeListOfAppends(listOfAppends);
         int nonceC2 = 1;
         byte[] dataC2 = (valueC2 + nonceC2).getBytes();
         byte[] signatureC2 = CryptSignature.sign(dataC2, "src/main/resources/privateKeys/rk_client1.key");
+        Append append2 = new Append("client1", valueC2, signatureC2, nonceC2);
+        List<Append> listOfAppends2 = new ArrayList<>();
+        listOfAppends2.add(append2);
+        String actualValue2 = nodeServices.get("1").serializeListOfAppends(listOfAppends2);
         for (int i = 1; i <= 3; i++) {
-            nodeServices.get(Integer.toString(i)).startConsensus(valueC1, nonceC1, signatureC1, "client");
+            nodeServices.get(Integer.toString(i)).startConsensus(actualValue);
         }
-        nodeServices.get(Integer.toString(4)).startConsensus(valueC2, nonceC2, signatureC2, "client1");
+        nodeServices.get(Integer.toString(4)).startConsensus(actualValue2);
         for (int i = 1; i <= 3; i++) {
-            nodeServices.get(Integer.toString(i)).startConsensus(valueC2, nonceC2, signatureC2, "client1");
+            nodeServices.get(Integer.toString(i)).startConsensus(actualValue2);
         }
-        nodeServices.get(Integer.toString(4)).startConsensus(valueC1, nonceC1, signatureC1, "client");
+        nodeServices.get(Integer.toString(4)).startConsensus(actualValue);
         // sleep for 7 seconds
         try {
             Thread.sleep(6000);
@@ -249,7 +265,7 @@ public class NodeServiceTest {
         }
         // get ledger from all nodeServices except 4 (it's byzantine)
         for (int i = 1; i <= 4; i++) {
-            assertEquals("ola", nodeServices.get(Integer.toString(i)).getLedger().get(0));
+            assertEquals(actualValue, nodeServices.get(Integer.toString(i)).getLedger().get(0));
         }
         for (int i = 1; i <= 4; i++) {
             nodeServices.get(Integer.toString(i)).close();
