@@ -5,8 +5,6 @@ import java.util.HashSet;
 import java.util.Optional;
 import java.util.Set;
 
-import com.google.gson.Gson;
-
 import pt.ulisboa.tecnico.hdsledger.client.models.MessageBucket;
 import pt.ulisboa.tecnico.hdsledger.communication.AppendMessage;
 import pt.ulisboa.tecnico.hdsledger.communication.CheckBalanceMessage;

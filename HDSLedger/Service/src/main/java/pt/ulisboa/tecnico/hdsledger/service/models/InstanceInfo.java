@@ -4,7 +4,6 @@ package pt.ulisboa.tecnico.hdsledger.service.models;
 import java.util.List;
 
 import pt.ulisboa.tecnico.hdsledger.communication.CommitMessage;
-import pt.ulisboa.tecnico.hdsledger.communication.Message;
 import pt.ulisboa.tecnico.hdsledger.utilities.Transaction;
 
 public class InstanceInfo {
@@ -15,9 +14,6 @@ public class InstanceInfo {
     private CommitMessage commitMessage;
     private String inputValue;
     private int committedRound = -1;
-    private String senderId = null;
-    private int nonce;
-    private byte[] signature;
     private List<Transaction> currentTransactions;
 
     // Contructor for transactions
@@ -35,14 +31,6 @@ public class InstanceInfo {
 
     public void setCurrentTransactions(List<Transaction> currentTransactions) {
         this.currentTransactions = currentTransactions;
-    }
-
-    public String getSenderId() {
-        return this.senderId;
-    }
-
-    public void setSenderId(String senderId) {
-        this.senderId = senderId;
     }
 
     public int getCurrentRound() {
@@ -92,21 +80,4 @@ public class InstanceInfo {
     public void setCommitMessage(CommitMessage commitMessage) {
         this.commitMessage = commitMessage;
     }
-
-    public int getNonce() {
-        return nonce;
-    }
-
-    public void setNonce(int nonce) {
-        this.nonce = nonce;
-    }
-
-    public byte[] getSignature() {
-        return signature;
-    }
-
-    public void setSignature(byte[] signature) {
-        this.signature = signature;
-    }
-
 }

@@ -32,21 +32,24 @@ public class CryptSignature {
             return uKey;
         } catch (IOException e) {
             e.printStackTrace();
-            return null; // Or handle error appropriately
+            return ""; // Or handle error appropriately
         }
     }
 
-    public static String hashPublicKey(String publicKeyString) throws NoSuchAlgorithmException {
-
-        byte[] publicKeyBytes = Base64.getDecoder().decode(publicKeyString);
-
-        MessageDigest digest = MessageDigest.getInstance("SHA-256");
-
-        byte[] hashBytes = digest.digest(publicKeyBytes);
-
-        String hashBase64 = Base64.getEncoder().encodeToString(hashBytes);
-        
-        return hashBase64;
+    public static String hashPublicKey(String publicKeyString) {
+        try {
+            byte[] publicKeyBytes = Base64.getDecoder().decode(publicKeyString);
+            MessageDigest digest = MessageDigest.getInstance("SHA-256");
+            
+            byte[] hashBytes = digest.digest(publicKeyBytes);
+            
+            String hashBase64 = Base64.getEncoder().encodeToString(hashBytes);
+            
+            return hashBase64;
+        } catch (NoSuchAlgorithmException e) {
+            e.printStackTrace();
+            return null;
+        }
     }
     
     public static PublicKey getPublicKey(String publicKeyPath) {

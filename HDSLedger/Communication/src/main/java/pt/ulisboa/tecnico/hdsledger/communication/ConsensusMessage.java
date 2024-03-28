@@ -14,12 +14,6 @@ public class ConsensusMessage extends Message {
     private int replyToMessageId;
     // Message (PREPREPARE, PREPARE, COMMIT, CHECK_BALANCE, APPEND, TRANSFER, CONFIRMATION)
     private String message;
-    // nonce from client
-    private int nonce;
-    // data signed by client
-    private byte[] signature;
-    // client id
-    private String clientId;
 
     public ConsensusMessage(String senderId, Type type) {
         super(senderId, type);
@@ -63,30 +57,6 @@ public class ConsensusMessage extends Message {
 
     public void setMessage(String message) {
         this.message = message;
-    }
-
-    public int getNonce() {
-        return nonce;
-    }
-
-    public void setNonce(int nonce) {
-        this.nonce = nonce;
-    }
-
-    public byte[] getSignature() {
-        return signature;
-    }
-
-    public void setSignature(byte[] signature) {
-        this.signature = signature;
-    }
-
-    public String getClientId() {
-        return clientId;
-    }
-
-    public void setClientId(String clientId) {
-        this.clientId = clientId;
     }
 
     public int getConsensusInstance() {

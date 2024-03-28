@@ -15,13 +15,6 @@ public class ConsensusMessageBuilder {
         return this;
     }
 
-    public ConsensusMessageBuilder setClientInfo(int nonce, byte[] signature, String clientId) {
-        instance.setNonce(nonce);
-        instance.setSignature(signature);
-        instance.setClientId(clientId);
-        return this;
-    }
-
     public ConsensusMessageBuilder setConsensusInstance(int consensusInstance) {
         instance.setConsensusInstance(consensusInstance);
         return this;
