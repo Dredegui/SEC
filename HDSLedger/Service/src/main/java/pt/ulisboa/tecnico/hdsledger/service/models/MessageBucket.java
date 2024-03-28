@@ -135,6 +135,13 @@ public class MessageBucket {
     public List<ConsensusMessage> findPreparedValueQuorum(int instance, int round, String preparedValue) {
         return bucket.get(instance).get(round).values().stream().filter((message) -> {
             PrepareMessage prepareMessage = message.deserializePrepareMessage();
+            if (preparedValue == null) {
+                if (prepareMessage.getValue() == null) {
+                    return true;
+                } else {
+                    return false;
+                }
+            }
             return prepareMessage.getValue().equals(preparedValue);
         }).toList();
     }
