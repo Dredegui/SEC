@@ -253,6 +253,34 @@ public class NodeService implements UDPService {
         }
         return true;
     }
+
+    public void printValue(String value) {
+        if(value.charAt(0) == 'T') {
+            List<Transaction> currentTransactions = deserializeCurrentTransactions(value.substring(1));
+            for (Transaction t : currentTransactions) {
+                System.out.println("NodeId:" + config.getId());
+                System.out.println("Transaction -> SenderPKhash:" + t.getSender() + " ReceiverPKhash:" + t.getReceiver() + " Amount:" + t.getAmount() + " Nonce:" + t.getNonce());
+
+                Account senderAccount = accounts.get(t.getSender());
+                Account receiverAccount = accounts.get(t.getReceiver());
+
+                senderAccount.updateContablisticBalance(-t.getAmount());
+                senderAccount.setAuthorizedBalance(senderAccount.getContablisticBalance());
+
+                receiverAccount.updateContablisticBalance(t.getAmount());
+                receiverAccount.setAuthorizedBalance(receiverAccount.getContablisticBalance());
+
+                blockChain.createBlock(blockChain.getLastBlock().getPreviousHash());
+            }
+        }
+        else if (value.charAt(0) == 'A') {
+            List<Append> listOfAppends = deserializeAppends(value.substring(1));
+            for (Append a : listOfAppends) {
+                System.out.println("NodeId:" + config.getId());
+                System.out.println("Append -> Value:" + a.getValue() + " Nonce:" + a.getNonce() + " ClientId:" + a.getCLientId());
+            }
+        }
+    }
     
 
     public ConsensusMessage createRoundChange(int instance, int round, int preparedRound, String preparedValue) {
@@ -534,7 +562,7 @@ public class NodeService implements UDPService {
             blockChain.addTransaction(senderAccount.getPublicKeyHash(), receiverAccount.getPublicKeyHash(), amount, signature, nonce);
 
             // Update the authorized balance
-            senderAccount.updateBalance(-amount);
+            senderAccount.updateAuthorizedBalance(amount);
 
             this.link.send(message.getSenderId(), new ConsensusMessageBuilder(this.config.getId(), Message.Type.CONFIRMATION)
                     .setMessage(new ConfirmationMessage(1).toJson())
@@ -727,7 +755,6 @@ public class NodeService implements UDPService {
     }
 
 
-
     /*
      * Handle commit messages and decide if there is a valid quorum
      *
@@ -791,16 +818,26 @@ public class NodeService implements UDPService {
                 }
                 
                 ledger.add(consensusInstance - 1, value);
+
                 // TODO - CHANGE PRINT TO INCLUDE EVERY TRANSACTION IN THE COMMIT
-                System.out.println("nodeID " + config.getId() + "COMMITED VALUE: " + value);
+                printValue(value);
 
                 // Apenas o lider é que envia a confirmation 
                 if(this.config.isLeader()){
+
+                    if(value.charAt(0) == 'T') {
+                        
+                    }
+                    else if (value.charAt(0) == 'A') {
+
+                    }
         
                     // Send to client confirmation message of the appended value to the ledger
-                    // this.link.send(m.getClientId(), new ConsensusMessageBuilder(this.config.getId(),Message.Type.CONFIRMATION)
-                    //        .setMessage(new ConfirmationMessage(consensusInstance-1).toJson())
-                    //        .build());
+                    /*
+                    this.link.send(m.getClientId(), new ConsensusMessageBuilder(this.config.getId(),Message.Type.CONFIRMATION)
+                    .setMessage(new ConfirmationMessage(consensusInstance-1).toJson())
+                    .build());
+                    */
                 }
                 
                 LOGGER.log(Level.INFO,

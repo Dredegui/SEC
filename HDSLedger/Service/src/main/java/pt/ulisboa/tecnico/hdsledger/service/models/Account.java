@@ -32,8 +32,12 @@ public class Account {
         return this.authorizedBalance >= amount;
     }
 
-    public void updateBalance(double amount) {
-        this.authorizedBalance += amount;
+    public void updateAuthorizedBalance(double amount) {
+        this.authorizedBalance -= amount;
+    }
+
+    public void updateContablisticBalance(double amount) {
+        this.contablisticBalance += amount;
     }
 
     public double getContablisticBalance() {
