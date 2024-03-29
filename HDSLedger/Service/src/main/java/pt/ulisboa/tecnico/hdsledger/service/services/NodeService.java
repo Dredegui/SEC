@@ -254,7 +254,7 @@ public class NodeService implements UDPService {
         return true;
     }
 
-    public void printValue(String value) {
+    public void commitValues(String value) {
         if(value.charAt(0) == 'T') {
             List<Transaction> currentTransactions = deserializeCurrentTransactions(value.substring(1));
             for (Transaction t : currentTransactions) {
@@ -278,6 +278,8 @@ public class NodeService implements UDPService {
             for (Append a : listOfAppends) {
                 System.out.println("NodeId:" + config.getId());
                 System.out.println("Append -> Value:" + a.getValue() + " Nonce:" + a.getNonce() + " ClientId:" + a.getCLientId());
+
+                blockChain.createBlock(blockChain.getLastBlock().getPreviousHash());
             }
         }
     }
@@ -820,15 +822,37 @@ public class NodeService implements UDPService {
                 ledger.add(consensusInstance - 1, value);
 
                 // TODO - CHANGE PRINT TO INCLUDE EVERY TRANSACTION IN THE COMMIT
-                printValue(value);
+                // Create te block for each operation (Transactions or Append) and updates the balances
+                commitValues(value);
 
                 // Apenas o lider é que envia a confirmation 
                 if(this.config.isLeader()){
 
                     if(value.charAt(0) == 'T') {
+                        List<Transaction> currentTransactions = deserializeCurrentTransactions(value.substring(1));
+                        for(Transaction t : currentTransactions) {
+                            String clientId = null;
+                            for (int i = 0; i < nodesConfig.length; i++) {
+                                String publicKeyPath = nodesConfig[i].getPublicKey();
+                                String publicKeyHash = CryptSignature.hashPublicKey(CryptSignature.loadPublicKey(publicKeyPath));
+                                if (publicKeyHash.equals(t.getSender())) {
+                                    clientId = nodesConfig[i].getId();
+                                    break;
+                                }
+                            }
+                            this.link.send(clientId, new ConsensusMessageBuilder(this.config.getId(), Message.Type.CONFIRMATION)
+                                .setMessage(new ConfirmationMessage(consensusInstance-1).toJson())
+                                .build());
+                        }
                         
                     }
                     else if (value.charAt(0) == 'A') {
+                        List<Append> listOfAppends = deserializeAppends(value.substring(1));
+                        for(Append a : listOfAppends) {
+                            this.link.send(a.getCLientId(), new ConsensusMessageBuilder(this.config.getId(), Message.Type.CONFIRMATION)
+                                .setMessage(new ConfirmationMessage(consensusInstance-1).toJson())
+                                .build());
+                        }
 
                     }
         
