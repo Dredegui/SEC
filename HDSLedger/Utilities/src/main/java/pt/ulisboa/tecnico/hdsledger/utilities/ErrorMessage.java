@@ -6,7 +6,8 @@ public enum ErrorMessage {
     NoSuchNode("Can't send a message to a non existing node"),
     SocketSendingError("Error while sending message"),
     ExtractKeyError("Error while extracting key from file"),
-    InvalidSignature("Signature doesn't match the message content"),
+    InvalidHash("Hash doesn't match the message content"),
+    //InvalidSignature("Signature doesn't match the message content"),
     CannotOpenSocket("Error while opening socket");
 
     private final String message;

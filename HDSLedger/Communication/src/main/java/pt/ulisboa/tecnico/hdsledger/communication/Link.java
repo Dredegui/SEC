@@ -127,13 +127,13 @@ public class Link {
                     return;
                 }
                 byte[] buf = new Gson().toJson(data).getBytes();
-                byte[] signature = CryptSignature.sign(buf, privateKey);
+                byte[] hash = CryptSignature.hash(buf);
                 for (;;) {
                     LOGGER.log(Level.INFO, MessageFormat.format(
                             "{0} - Sending {1} message to {2}:{3} with message ID {4} - Attempt #{5}", config.getId(),
                             data.getType(), destAddress, destPort, messageId, count++));
 
-                    unreliableSend(destAddress, destPort, data, signature);
+                    unreliableSend(destAddress, destPort, data, hash);
 
                     // Wait (using exponential back-off), then look for ACK
                     Thread.sleep(sleepTime);
@@ -164,16 +164,16 @@ public class Link {
      *
      * @param data The message to be sent
      */
-    public void unreliableSend(InetAddress hostname, int port, Message data, byte[] signature) {
+    public void unreliableSend(InetAddress hostname, int port, Message data, byte[] hash) {
         new Thread(() -> {
             try {
                 byte[] buf = new Gson().toJson(data).getBytes();
                 // Add signature to the message
-                byte[] bufWithSignature = new byte[buf.length + signature.length];
-                System.arraycopy(buf, 0, bufWithSignature, 0, buf.length);
-                System.arraycopy(signature, 0, bufWithSignature, buf.length, signature.length);
+                byte[] bufWithHash = new byte[buf.length + hash.length];
+                System.arraycopy(buf, 0, bufWithHash, 0, buf.length);
+                System.arraycopy(hash, 0, bufWithHash, buf.length, hash.length);
                 
-                DatagramPacket packet = new DatagramPacket(bufWithSignature, bufWithSignature.length, hostname, port);
+                DatagramPacket packet = new DatagramPacket(bufWithHash, bufWithHash.length, hostname, port);
                 socket.send(packet);
             } catch (IOException e) {
                 e.printStackTrace();
@@ -206,18 +206,11 @@ public class Link {
             byte[] buffer = Arrays.copyOfRange(response.getData(), 0, response.getLength());
             // split the buffer into the message and the signature
             byte[] messageBuffer = Arrays.copyOfRange(buffer, 0, buffer.length - 256);
-            byte[] signature = Arrays.copyOfRange(buffer, buffer.length - 256, buffer.length);
+            byte[] hash = Arrays.copyOfRange(buffer, buffer.length - 256, buffer.length);
             serialized = new String(messageBuffer);
             message = new Gson().fromJson(serialized, Message.class);
-            // verify the signature
-            String nodeId = message.getSenderId();
-            ProcessConfig sender = nodes.get(nodeId);
-            if (sender == null)
-                sender = clients.get(nodeId);
-            // Other node public key
-            String publicKey = sender.getPublicKey();
-            if (!CryptSignature.validate(messageBuffer, signature, publicKey)) {
-                throw new HDSSException(ErrorMessage.InvalidSignature);
+            if (!hash.equals(CryptSignature.hash(messageBuffer))) {
+                throw new HDSSException(ErrorMessage.InvalidHash);
             }
         }
 

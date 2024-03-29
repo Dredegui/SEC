@@ -37,15 +37,21 @@ public class CryptSignature {
     }
 
     public static String hashPublicKey(String publicKeyString) {
+        byte[] publicKeyBytes = Base64.getDecoder().decode(publicKeyString);
+
+        String hashBase64 = Base64.getEncoder().encodeToString(hash(publicKeyBytes));
+        
+        return hashBase64;
+    }
+
+    public static byte[] hash(byte[] data) {
         try {
-            byte[] publicKeyBytes = Base64.getDecoder().decode(publicKeyString);
             MessageDigest digest = MessageDigest.getInstance("SHA-256");
             
-            byte[] hashBytes = digest.digest(publicKeyBytes);
-            
-            String hashBase64 = Base64.getEncoder().encodeToString(hashBytes);
-            
-            return hashBase64;
+            byte[] hashBytes = digest.digest(data);
+
+            return hashBytes;
+                        
         } catch (NoSuchAlgorithmException e) {
             e.printStackTrace();
             return null;
