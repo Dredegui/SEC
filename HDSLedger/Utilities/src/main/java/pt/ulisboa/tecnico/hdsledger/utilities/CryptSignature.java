@@ -40,10 +40,10 @@ public class CryptSignature {
         }
     }
 
-    public static String hashPublicKey(String publicKeyString) {
-        byte[] publicKeyBytes = Base64.getDecoder().decode(publicKeyString);
+    public static String hashString(String data) {
+        byte[] dataBytes = Base64.getDecoder().decode(data);
 
-        String hashBase64 = Base64.getEncoder().encodeToString(hash(publicKeyBytes));
+        String hashBase64 = Base64.getEncoder().encodeToString(hash(dataBytes));
         
         return hashBase64;
     }

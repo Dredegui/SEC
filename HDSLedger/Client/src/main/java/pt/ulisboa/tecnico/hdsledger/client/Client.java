@@ -35,7 +35,7 @@ public class Client {
        
         String destinyPublicKeyPath = "src/main/resources/publicKeys/" + destinyId + "Public.key";
         String destinyPublicKey = CryptSignature.loadPublicKey(destinyPublicKeyPath);
-        String destinyPublicKeyHash = CryptSignature.hashPublicKey(destinyPublicKey);
+        String destinyPublicKeyHash = CryptSignature.hashString(destinyPublicKey);
 
         clientService.transfer(sourceId, sourcePublicKeyHash, destinyPublicKeyHash, amount);
 
@@ -104,7 +104,7 @@ public class Client {
         Client client = new Client(clientService);
 
         String publicKey = CryptSignature.loadPublicKey(nodeConfig.getPublicKey());
-        String publicKeyHash = CryptSignature.hashPublicKey(publicKey);
+        String publicKeyHash = CryptSignature.hashString(publicKey);
 
         // Start CLI
         client.cli(id,publicKeyHash);
