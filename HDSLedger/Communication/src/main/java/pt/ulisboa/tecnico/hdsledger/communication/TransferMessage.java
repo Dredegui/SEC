@@ -9,14 +9,12 @@ public class TransferMessage {
     // Destiny public key hash
     private String destiny;
     private double amount;
-    private byte[] signature;
     private int nonce;
 
-    public TransferMessage(String source, String destiny, double amount, byte[] signature, int nonce) {
+    public TransferMessage(String source, String destiny, double amount, int nonce) {
         this.source = source;
         this.destiny = destiny;
         this.amount = amount;
-        this.signature = signature;
         this.nonce = nonce;
     }
 
@@ -30,10 +28,6 @@ public class TransferMessage {
 
     public double getAmount() {
         return amount;
-    }
-
-    public byte[] getSignature() {
-        return signature;
     }
 
     public int getNonce() {
