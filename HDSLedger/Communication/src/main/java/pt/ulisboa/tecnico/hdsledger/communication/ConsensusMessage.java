@@ -14,6 +14,10 @@ public class ConsensusMessage extends Message {
     private int replyToMessageId;
     // Message (PREPREPARE, PREPARE, COMMIT, CHECK_BALANCE, APPEND, TRANSFER, CONFIRMATION)
     private String message;
+    // Original sender Id
+    private String originalSenderId;
+    // Signature
+    private byte[] signature;
 
     public ConsensusMessage(String senderId, Type type) {
         super(senderId, type);
@@ -89,5 +93,21 @@ public class ConsensusMessage extends Message {
 
     public void setReplyToMessageId(int replyToMessageId) {
         this.replyToMessageId = replyToMessageId;
+    }
+
+    public String getOriginalSenderId() {
+        return originalSenderId;
+    }
+
+    public void setOriginalSenderId(String originalSenderId) {
+        this.originalSenderId = originalSenderId;
+    }
+
+    public byte[] getSignature() {
+        return signature;
+    }
+
+    public void setSignature(byte[] signature) {
+        this.signature = signature;
     }
 }
