@@ -33,6 +33,7 @@ import pt.ulisboa.tecnico.hdsledger.communication.RoundChangeMessage;
 import pt.ulisboa.tecnico.hdsledger.communication.TransferMessage;
 import pt.ulisboa.tecnico.hdsledger.communication.builder.ConsensusMessageBuilder;
 import pt.ulisboa.tecnico.hdsledger.service.models.Account;
+import pt.ulisboa.tecnico.hdsledger.service.models.Block;
 import pt.ulisboa.tecnico.hdsledger.service.models.BlockChain;
 import pt.ulisboa.tecnico.hdsledger.service.models.InstanceInfo;
 import pt.ulisboa.tecnico.hdsledger.service.models.MessageBucket;
@@ -106,7 +107,7 @@ public class NodeService implements UDPService {
             }
             else {
                 String publicKey = CryptSignature.loadPublicKey(nodesConfig[i].getPublicKey());
-                String publicKeyHash = CryptSignature.hashPublicKey(publicKey);
+                String publicKeyHash = CryptSignature.hashString(publicKey);
                 accounts.put(publicKeyHash, new Account(publicKeyHash));
                 nonces.put(nodesConfig[i].getId(), 0);
             }
@@ -231,7 +232,7 @@ public class NodeService implements UDPService {
             String clientId = null;
             for (int i = 0; i < nodesConfig.length; i++) {
                 String publicKeyPath = nodesConfig[i].getPublicKey();
-                String publicKeyHash = CryptSignature.hashPublicKey(CryptSignature.loadPublicKey(publicKeyPath));
+                String publicKeyHash = CryptSignature.hashString(CryptSignature.loadPublicKey(publicKeyPath));
                 if (publicKeyHash.equals(t.getSender())) {
                     clientId = nodesConfig[i].getId();
                     break;
@@ -270,17 +271,22 @@ public class NodeService implements UDPService {
                 receiverAccount.updateContablisticBalance(t.getAmount());
                 receiverAccount.setAuthorizedBalance(receiverAccount.getContablisticBalance());
 
-                blockChain.createBlock(blockChain.getLastBlock().getPreviousHash());
             }
+            
+            Block lastBlock = blockChain.getLastBlock();
+            String lastBlockHash = CryptSignature.hashString(lastBlock.toString());
+            blockChain.createBlock(lastBlockHash);
         }
         else if (value.charAt(0) == 'A') {
             List<Append> listOfAppends = deserializeAppends(value.substring(1));
             for (Append a : listOfAppends) {
                 System.out.println("NodeId:" + config.getId());
                 System.out.println("Append -> Value:" + a.getValue() + " Nonce:" + a.getNonce() + " ClientId:" + a.getCLientId());
-
-                blockChain.createBlock(blockChain.getLastBlock().getPreviousHash());
             }
+
+            Block lastBlock = blockChain.getLastBlock();
+            String lastBlockHash = CryptSignature.hashString(lastBlock.toString());
+            blockChain.createBlock(lastBlockHash);
         }
     }
     
@@ -834,7 +840,7 @@ public class NodeService implements UDPService {
                             String clientId = null;
                             for (int i = 0; i < nodesConfig.length; i++) {
                                 String publicKeyPath = nodesConfig[i].getPublicKey();
-                                String publicKeyHash = CryptSignature.hashPublicKey(CryptSignature.loadPublicKey(publicKeyPath));
+                                String publicKeyHash = CryptSignature.hashString(CryptSignature.loadPublicKey(publicKeyPath));
                                 if (publicKeyHash.equals(t.getSender())) {
                                     clientId = nodesConfig[i].getId();
                                     break;
