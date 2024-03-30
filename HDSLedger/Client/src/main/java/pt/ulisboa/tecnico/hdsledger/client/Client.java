@@ -36,10 +36,11 @@ public class Client {
         String destinyPublicKeyPath = "src/main/resources/publicKeys/" + destinyId + "Public.key";
         String destinyPublicKey = CryptSignature.loadPublicKey(destinyPublicKeyPath);
         String destinyPublicKeyHash = CryptSignature.hashString(destinyPublicKey);
-
+        
+        System.out.println("Transfering " + amount + " to " + destinyId);
+        
         clientService.transfer(sourceId, sourcePublicKeyHash, destinyPublicKeyHash, amount);
 
-        System.out.println("Transfering " + amount + " to " + destinyId);
     }
 
     public void cli(String id, String publicKeyHash) {
@@ -66,12 +67,12 @@ public class Client {
                         check_balance(id, publicKeyHash);
                         break;
                     case 3:
-                    System.out.print("Enter the destination (client id): ");
-                    String destinationId = scanner.nextLine();
-                    System.out.print("Enter the amount to transfer: ");
-                    double amount = scanner.nextDouble();
-                    
-                    transfer(id,publicKeyHash,destinationId,amount);
+                        System.out.print("Enter the destination (client id): ");
+                        String destinationId = scanner.nextLine();
+                        System.out.print("Enter the amount to transfer: ");
+                        double amount = scanner.nextDouble();
+                        
+                        transfer(id,publicKeyHash,destinationId,amount);
                         break;
                     case 5:
                         running = false;
@@ -83,6 +84,7 @@ public class Client {
     
             // Close the scanner
             scanner.close();
+            clientService.shutdown();
         }
 
     public static void main(String[] args) {
@@ -97,7 +99,7 @@ public class Client {
 
 
         // Abstraction to send and receive messages
-        Link linkToNodes = new Link(nodeConfig, private_key_path, nodeConfig.getPort(), nodeConfigs,
+        Link linkToNodes = new Link(nodeConfig, nodeConfig.getPort(), nodeConfigs,
                 ConsensusMessage.class);
         
         ClientService clientService = new ClientService(linkToNodes, private_key_path, nodeConfigs);
@@ -108,5 +110,9 @@ public class Client {
 
         // Start CLI
         client.cli(id,publicKeyHash);
+
+        Runtime.getRuntime().addShutdownHook(new Thread(() -> {
+            clientService.shutdown();
+        }));
     }
 }
