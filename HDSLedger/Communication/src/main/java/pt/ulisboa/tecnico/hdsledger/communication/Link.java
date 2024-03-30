@@ -28,8 +28,6 @@ public class Link {
     private final Map<String, ProcessConfig> clients = new ConcurrentHashMap<>();
     // Reference to the node itself
     private final ProcessConfig config;
-    // Private Key Path
-    private final String privateKey;
     // Class to deserialize messages to
     private final Class<? extends Message> messageClass;
     // Set of received messages from specific node (prevent duplicates)
@@ -41,15 +39,14 @@ public class Link {
     // Send messages to self by pushing to queue instead of through the network
     private final Queue<Message> localhostQueue = new ConcurrentLinkedQueue<>();
 
-    public Link(ProcessConfig self, String privateKey ,int port, ProcessConfig[] nodes, Class<? extends Message> messageClass) {
-        this(self, privateKey, port, nodes, messageClass, false, 200);
+    public Link(ProcessConfig self, int port, ProcessConfig[] nodes, Class<? extends Message> messageClass) {
+        this(self, port, nodes, messageClass, false, 200);
     }
 
-    public Link(ProcessConfig self, String privateKey ,int port, ProcessConfig[] nodes, Class<? extends Message> messageClass,
+    public Link(ProcessConfig self ,int port, ProcessConfig[] nodes, Class<? extends Message> messageClass,
             boolean activateLogs, int baseSleepTime) {
 
         this.config = self;
-        this.privateKey = privateKey;
         this.messageClass = messageClass;
         this.BASE_SLEEP_TIME = baseSleepTime;
 
@@ -197,7 +194,6 @@ public class Link {
             local = true; 
             this.receivedAcks.add(message.getMessageId());
         } else {
-            // TODO: Check if buffer size is enough
             byte[] buf = new byte[65535];
             response = new DatagramPacket(buf, buf.length);
             
