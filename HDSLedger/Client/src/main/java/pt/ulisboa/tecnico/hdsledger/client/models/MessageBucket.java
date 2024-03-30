@@ -7,6 +7,7 @@ import java.util.Optional;
 import java.util.concurrent.CopyOnWriteArrayList;
 
 import pt.ulisboa.tecnico.hdsledger.communication.CheckBalanceMessage;
+import pt.ulisboa.tecnico.hdsledger.communication.ConfirmationMessage;
 
 public class MessageBucket {
 
@@ -16,6 +17,12 @@ public class MessageBucket {
 
     // List of CheckBalanceMessages
     private List<CheckBalanceMessage> balanceMessages = new CopyOnWriteArrayList<>();
+
+    // List of ConfirmationMessages for tranfers
+    private List<ConfirmationMessage> transferConfirmationMessages = new CopyOnWriteArrayList<>();
+
+    // List of ConfirmationMessages for appends
+    private List<ConfirmationMessage> appendConfirmationMessages = new CopyOnWriteArrayList<>();
     
     public MessageBucket(int nodeCount) {
         f = Math.floorDiv(nodeCount - 1, 3);
@@ -28,6 +35,22 @@ public class MessageBucket {
 
     public void clearCheckBalanceMessages() {
         balanceMessages.clear();
+    }
+
+    public void addTransferConfirmationMessage(ConfirmationMessage message) {
+        transferConfirmationMessages.add(message);
+    }
+
+    public void clearTransferConfirmationMessage() {
+        transferConfirmationMessages.clear();
+    }
+
+    public void addAppendConfirmationMessage(ConfirmationMessage message) {
+        appendConfirmationMessages.add(message);
+    }
+
+    public void clearAppendConfirmationMessage() {
+        appendConfirmationMessages.clear();
     }
 
     public Optional<Double[]> hasValidCheckBalanceQuorum() {
@@ -61,6 +84,48 @@ public class MessageBucket {
         }
 
         // If either quorum is not present, return an empty Optional
+        return Optional.empty();
+    }
+
+    public Optional<Integer> hasValidTransferConfirmationQuorom()  {
+        Map<Integer,Integer> transferLedgerFrequency = new HashMap<>();
+
+        for (ConfirmationMessage message : transferConfirmationMessages) {
+            int ledgerMessageLocation = message.getLedgerMessageLocation();
+
+            transferLedgerFrequency.put(ledgerMessageLocation, transferLedgerFrequency.getOrDefault(ledgerMessageLocation, 0) + 1);
+        }
+
+        Optional<Integer> transferLedgerQuorum = transferLedgerFrequency.entrySet().stream()
+            .filter(entry -> entry.getValue() >= quorumSize)
+            .map(Map.Entry::getKey)
+            .findFirst();
+
+        if (transferLedgerQuorum.isPresent()) {
+            return transferLedgerQuorum;
+        }
+
+        return Optional.empty();
+    }
+
+    public Optional<Integer> hasValidAppendConfirmationQuorom()  {
+        Map<Integer,Integer> appendLedgerFrequency = new HashMap<>();
+
+        for (ConfirmationMessage message : appendConfirmationMessages) {
+            int ledgerMessageLocation = message.getLedgerMessageLocation();
+
+            appendLedgerFrequency.put(ledgerMessageLocation, appendLedgerFrequency.getOrDefault(ledgerMessageLocation, 0) + 1);
+        }
+
+        Optional<Integer> appendLedgerQuorum = appendLedgerFrequency.entrySet().stream()
+            .filter(entry -> entry.getValue() >= quorumSize)
+            .map(Map.Entry::getKey)
+            .findFirst();
+
+        if (appendLedgerQuorum.isPresent()) {
+            return appendLedgerQuorum;
+        }
+
         return Optional.empty();
     }
 }
