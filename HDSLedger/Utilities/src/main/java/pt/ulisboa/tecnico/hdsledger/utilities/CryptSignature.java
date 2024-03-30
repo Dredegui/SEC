@@ -67,13 +67,13 @@ public class CryptSignature {
         byte[] mac = new byte[32];
         try {
             // Create a Mac object and initialize it with the key
-            Mac sha256_HMAC = Mac.getInstance("SHA-256");
-            SecretKeySpec secret_key = new SecretKeySpec(key, "SHA-256");
+            Mac sha256_HMAC = Mac.getInstance("HmacSHA256");
+            SecretKeySpec secret_key = new SecretKeySpec(key, "HmacSHA256");
             sha256_HMAC.init(secret_key);
             // Update and sign the data
             mac = sha256_HMAC.doFinal(data);
             return mac;
-        } catch (Exception e) { // TODO: improve exception handling and specification
+        } catch (Exception e) { 
             e.printStackTrace();
             return null;
         }
@@ -83,14 +83,14 @@ public class CryptSignature {
     public static boolean validateMAC(byte[] data, byte[] mac, byte[] key) {
         try {
             // Create a Mac object and initialize it with the key
-            Mac sha256_HMAC = Mac.getInstance("SHA-256");
-            SecretKeySpec secret_key = new SecretKeySpec(key, "SHA-256");
+            Mac sha256_HMAC = Mac.getInstance("HmacSHA256");
+            SecretKeySpec secret_key = new SecretKeySpec(key, "HmacSHA256");
             sha256_HMAC.init(secret_key);
             // Update and sign the data
             byte[] newMac = sha256_HMAC.doFinal(data);
             // Compare the two MACs
             return MessageDigest.isEqual(mac, newMac);
-        } catch (Exception e) { // TODO: improve exception handling and specification
+        } catch (Exception e) {
             e.printStackTrace();
             return false;
         }
@@ -154,7 +154,7 @@ public class CryptSignature {
             // Update and sign the data
             rsa.update(data);
             signature = rsa.sign();
-        } catch (Exception e) { // TODO: improve exception handling and specification
+        } catch (Exception e) {
             e.printStackTrace();
         }
         return signature;
@@ -170,7 +170,7 @@ public class CryptSignature {
             rsa.initVerify(pubKey);
             rsa.update(data);
             return rsa.verify(signature);
-        } catch (Exception e) { // TODO: improve exception handling and specification
+        } catch (Exception e) {
             e.printStackTrace();
             return false;
         }

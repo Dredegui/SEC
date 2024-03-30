@@ -128,7 +128,6 @@ public class Link {
                 }
                 byte[] buf = new Gson().toJson(data).getBytes();
                 byte[] mac = CryptSignature.createMAC(buf, CryptSignature.getSecretKey(this.config.getId(), nodeId));
-                System.out.println("Hash length: " + mac.length);
                 for (;;) {
                     LOGGER.log(Level.INFO, MessageFormat.format(
                             "{0} - Sending {1} message to {2}:{3} with message ID {4} - Attempt #{5}", config.getId(),
