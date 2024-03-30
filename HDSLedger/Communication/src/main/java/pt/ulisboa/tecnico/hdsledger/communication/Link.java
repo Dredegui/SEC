@@ -127,13 +127,14 @@ public class Link {
                     return;
                 }
                 byte[] buf = new Gson().toJson(data).getBytes();
-                byte[] hash = CryptSignature.hash(buf);
+                byte[] mac = CryptSignature.createMAC(buf, CryptSignature.getSecretKey(this.config.getId(), nodeId));
+                System.out.println("Hash length: " + mac.length);
                 for (;;) {
                     LOGGER.log(Level.INFO, MessageFormat.format(
                             "{0} - Sending {1} message to {2}:{3} with message ID {4} - Attempt #{5}", config.getId(),
                             data.getType(), destAddress, destPort, messageId, count++));
 
-                    unreliableSend(destAddress, destPort, data, hash);
+                    unreliableSend(destAddress, destPort, data, mac);
 
                     // Wait (using exponential back-off), then look for ACK
                     Thread.sleep(sleepTime);
@@ -164,16 +165,16 @@ public class Link {
      *
      * @param data The message to be sent
      */
-    public void unreliableSend(InetAddress hostname, int port, Message data, byte[] hash) {
+    public void unreliableSend(InetAddress hostname, int port, Message data, byte[] mac) {
         new Thread(() -> {
             try {
                 byte[] buf = new Gson().toJson(data).getBytes();
                 // Add signature to the message
-                byte[] bufWithHash = new byte[buf.length + hash.length];
-                System.arraycopy(buf, 0, bufWithHash, 0, buf.length);
-                System.arraycopy(hash, 0, bufWithHash, buf.length, hash.length);
+                byte[] bufWithMac = new byte[buf.length + mac.length];
+                System.arraycopy(buf, 0, bufWithMac, 0, buf.length);
+                System.arraycopy(mac, 0, bufWithMac, buf.length, mac.length);
                 
-                DatagramPacket packet = new DatagramPacket(bufWithHash, bufWithHash.length, hostname, port);
+                DatagramPacket packet = new DatagramPacket(bufWithMac, bufWithMac.length, hostname, port);
                 socket.send(packet);
             } catch (IOException e) {
                 e.printStackTrace();
@@ -205,12 +206,12 @@ public class Link {
 
             byte[] buffer = Arrays.copyOfRange(response.getData(), 0, response.getLength());
             // split the buffer into the message and the signature
-            byte[] messageBuffer = Arrays.copyOfRange(buffer, 0, buffer.length - 256);
-            byte[] hash = Arrays.copyOfRange(buffer, buffer.length - 256, buffer.length);
+            byte[] messageBuffer = Arrays.copyOfRange(buffer, 0, buffer.length - 32);
+            byte[] mac = Arrays.copyOfRange(buffer, buffer.length - 32, buffer.length);
             serialized = new String(messageBuffer);
             message = new Gson().fromJson(serialized, Message.class);
-            if (!hash.equals(CryptSignature.hash(messageBuffer))) {
-                throw new HDSSException(ErrorMessage.InvalidHash);
+            if (!CryptSignature.validateMAC(messageBuffer, mac, CryptSignature.getSecretKey(message.getSenderId(), config.getId()))) {
+                throw new HDSSException(ErrorMessage.InvalidMac);
             }
         }
 
@@ -276,13 +277,13 @@ public class Link {
             responseMessage.setMessageId(messageId);
             // sign the ACK
             byte[] buf = new Gson().toJson(responseMessage).getBytes();
-            byte[] signature = CryptSignature.sign(buf, privateKey);
+            byte[] mac = CryptSignature.createMAC(buf, CryptSignature.getSecretKey(message.getSenderId(), this.config.getId()));
             // ACK is sent without needing for another ACK because
             // we're assuming an eventually synchronous network
             // Even if a node receives the message multiple times,
             // it will discard duplicates
 
-            unreliableSend(address, port, responseMessage, signature);
+            unreliableSend(address, port, responseMessage, mac);
         }
         
         return message;

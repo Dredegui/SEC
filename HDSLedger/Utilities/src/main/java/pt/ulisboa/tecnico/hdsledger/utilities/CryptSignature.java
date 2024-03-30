@@ -2,6 +2,7 @@ package pt.ulisboa.tecnico.hdsledger.utilities;
 
 import java.io.IOException;
 import java.nio.file.Files;
+import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.security.KeyFactory;
 import java.security.MessageDigest;
@@ -12,6 +13,9 @@ import java.security.spec.PKCS8EncodedKeySpec;
 import java.security.spec.X509EncodedKeySpec;
 import java.security.Signature;
 import java.util.Base64;
+
+import javax.crypto.Mac;
+import javax.crypto.spec.SecretKeySpec;
 
 public class CryptSignature {
 
@@ -53,6 +57,54 @@ public class CryptSignature {
             return hashBytes;
                         
         } catch (NoSuchAlgorithmException e) {
+            e.printStackTrace();
+            return null;
+        }
+    }
+
+    // function that creates a MAC from data and a key
+    public static byte[] createMAC(byte[] data, byte[] key) {
+        byte[] mac = new byte[32];
+        try {
+            // Create a Mac object and initialize it with the key
+            Mac sha256_HMAC = Mac.getInstance("SHA-256");
+            SecretKeySpec secret_key = new SecretKeySpec(key, "SHA-256");
+            sha256_HMAC.init(secret_key);
+            // Update and sign the data
+            mac = sha256_HMAC.doFinal(data);
+            return mac;
+        } catch (Exception e) { // TODO: improve exception handling and specification
+            e.printStackTrace();
+            return null;
+        }
+    }
+
+    // function that validates a MAC
+    public static boolean validateMAC(byte[] data, byte[] mac, byte[] key) {
+        try {
+            // Create a Mac object and initialize it with the key
+            Mac sha256_HMAC = Mac.getInstance("SHA-256");
+            SecretKeySpec secret_key = new SecretKeySpec(key, "SHA-256");
+            sha256_HMAC.init(secret_key);
+            // Update and sign the data
+            byte[] newMac = sha256_HMAC.doFinal(data);
+            // Compare the two MACs
+            return MessageDigest.isEqual(mac, newMac);
+        } catch (Exception e) { // TODO: improve exception handling and specification
+            e.printStackTrace();
+            return false;
+        }
+    }
+
+    public static byte[] getSecretKey(String senderId, String receiverId) {
+        Path path = Paths.get("src/main/resources/secrets/secret_" + senderId + "_" + receiverId + ".key");
+        if (!path.toFile().exists()) {
+            path = Paths.get("src/main/resources/secrets/secret_" + receiverId + "_" + senderId + ".key");
+        }
+        try {
+            byte[] keyBytes = Files.readAllBytes(path);
+            return keyBytes;
+        } catch (IOException e) {
             e.printStackTrace();
             return null;
         }
