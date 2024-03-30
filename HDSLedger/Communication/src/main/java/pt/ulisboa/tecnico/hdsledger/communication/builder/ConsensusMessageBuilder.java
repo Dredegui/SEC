@@ -38,4 +38,14 @@ public class ConsensusMessageBuilder {
     public ConsensusMessage build() {
         return instance;
     }
+
+    public ConsensusMessageBuilder setOriginalSenderId(String originalSenderId) {
+        instance.setOriginalSenderId(originalSenderId);
+        return this;
+    }
+
+    public ConsensusMessageBuilder setSignature(byte[] signature) {
+        instance.setSignature(signature);
+        return this;
+    }
 }
