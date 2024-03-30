@@ -4,6 +4,8 @@ import java.io.IOException;
 import java.util.HashSet;
 import java.util.Optional;
 import java.util.Set;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
 
 import pt.ulisboa.tecnico.hdsledger.client.models.MessageBucket;
 import pt.ulisboa.tecnico.hdsledger.communication.AppendMessage;
@@ -25,6 +27,10 @@ public class ClientService {
     private String privateKey;
 
     private final MessageBucket checkBalanceMessages;
+    private final MessageBucket transferConfirmationMessages;
+    private final MessageBucket appendConfirmationMessages;
+
+    private ExecutorService executorService = Executors.newSingleThreadExecutor();
 
     private int totalNodes;
 
@@ -46,6 +52,10 @@ public class ClientService {
         }
 
         this.checkBalanceMessages = new MessageBucket(nodeCount);
+        this.transferConfirmationMessages = new MessageBucket(nodeCount);
+        this.appendConfirmationMessages = new MessageBucket(nodeCount);
+
+        listenTranfers();
     }
 
     public void append(String data, String id) {
@@ -54,13 +64,14 @@ public class ClientService {
         nonce++;
         byte[] dataNonce = (data + nonce).getBytes();
         byte[] signature = CryptSignature.sign(dataNonce, privateKey);
-        consensusMessage.setMessage(new AppendMessage(data, nonce, signature).toJson());
+        consensusMessage.setSignature(signature);
+        consensusMessage.setMessage(new AppendMessage(data, nonce).toJson());
 
         this.link.broadcast(consensusMessage);
 
         System.out.println("Waiting for confirmation...");
         
-        this.listenConfirmation();
+        this.listenAppends();
 
     }
 
@@ -82,32 +93,55 @@ public class ClientService {
         nonce++;
         byte[] data = (sourcePublicKeyHash + destinyPublicKeyHash + amount + nonce).getBytes();
         byte[] signature = CryptSignature.sign(data, privateKey);
-
-        consensusMessage.setMessage(new TransferMessage(sourcePublicKeyHash, destinyPublicKeyHash, amount, signature, nonce).toJson());
+        consensusMessage.setSignature(signature);
+        consensusMessage.setMessage(new TransferMessage(sourcePublicKeyHash, destinyPublicKeyHash, amount, nonce).toJson());
 
         this.link.broadcast(consensusMessage);
 
         System.out.println("Waiting for confirmation...");
+
+        //this.listenTranfers();
         
     }
 
-    public void listenConfirmation() {
-        
+    public void listenAppends() {
         try {
-            boolean listen = true;
-            while (listen) {
+            Set<ConfirmationMessage> respondedNodes = new HashSet<>();
+            boolean quorumReached = false;
+
+            while (respondedNodes.size() < totalNodes) {
                 Message message = link.receive();
                 if (message.getType() == Message.Type.CONFIRMATION) {
                     ConsensusMessage consensusMessage = ((ConsensusMessage) message);
                     ConfirmationMessage confirmationMessage = consensusMessage.deserializeConfirmationMessage();
-                    System.out.println("Message appended to the chain successfully in position: " + confirmationMessage.getLedgerMessageLocation());
-                    listen = false;
+                    respondedNodes.add(confirmationMessage);
+
+                    appendConfirmationMessages.addAppendConfirmationMessage(confirmationMessage);
+
+                    if (!quorumReached) {
+                        Optional<Integer> quorumResult = appendConfirmationMessages.hasValidAppendConfirmationQuorom();
+                        if (quorumResult.isPresent()) {
+                            quorumReached = true;
+
+                            Integer ledgerLocation = quorumResult.get();
+
+                            System.out.println("Quorum reached.");
+                            System.out.println("Your ledger location is: " + ledgerLocation);
+                        }
+                    }
+
+                    if (!quorumReached) {
+                        System.out.println("Waiting for a quorum...");
+                    }
+
                 }
             }
+
+            System.out.println("All nodes have responded.");
+            appendConfirmationMessages.clearAppendConfirmationMessage();
         } catch (IOException | ClassNotFoundException e) {
             e.printStackTrace();
         }
-        
     }
 
     public void listenBalance() {
@@ -121,13 +155,10 @@ public class ClientService {
                     ConsensusMessage consensusMessage = ((ConsensusMessage) message);
                     CheckBalanceMessage checkBalanceMessage = consensusMessage.deserializeCheckBalanceMessage();
 
-                    // Adicione a identificação do nó à lista de nós que responderam
-                    respondedNodes.add(consensusMessage.getSenderId()); // Presumindo que cada mensagem possa ser identificada de forma única
+                    respondedNodes.add(consensusMessage.getSenderId());
 
-                    // Adicione a mensagem à sua coleção
                     checkBalanceMessages.addCheckBalanceMessage(checkBalanceMessage);
 
-                    // Verifique se um quórum foi alcançado sem interromper a escuta
                     if (!quorumReached) {
                         Optional<Double[]> quorumResult = checkBalanceMessages.hasValidCheckBalanceQuorum();
                         if (quorumResult.isPresent()) {
@@ -153,34 +184,71 @@ public class ClientService {
 
             // Todos os nós responderam
             System.out.println("All nodes have responded.");
+            checkBalanceMessages.clearCheckBalanceMessages();
+
         } catch (IOException | ClassNotFoundException e) {
             e.printStackTrace();
         }
     }
 
-    public void listenTranfer() {
-        try {
-            boolean listen = true;
-            while (listen) {
-                Message message = link.receive();
-                if (message.getType() == Message.Type.CONFIRMATION) {
-                    ConsensusMessage consensusMessage = ((ConsensusMessage) message);
-                    ConfirmationMessage confirmationMessage = consensusMessage.deserializeConfirmationMessage();
-                    if (confirmationMessage.getLedgerMessageLocation() == -1) {
-                        System.out.println("Transfer failed: Invalid destiny account");
+    private void listenTranfers() {
+        executorService.submit(() -> {
+            try {
+                Set<ConfirmationMessage> respondedNodes = new HashSet<>();
+                boolean quorumReached = false;
+                
+                while (respondedNodes.size() < totalNodes) {
+                    Message message = link.receive();
+                    if (message.getType() == Message.Type.CONFIRMATION) {
+                        ConsensusMessage consensusMessage = ((ConsensusMessage) message);
+                        ConfirmationMessage confirmationMessage = consensusMessage.deserializeConfirmationMessage();
+                        respondedNodes.add(confirmationMessage); 
+
+                        // Adicione a mensagem à sua coleção
+                        transferConfirmationMessages.addTransferConfirmationMessage(confirmationMessage);
+
+                        // Verifique se um quórum foi alcançado sem interromper a escuta
+                        if (!quorumReached) {
+                            Optional<Integer> quorumResult = transferConfirmationMessages.hasValidTransferConfirmationQuorom();
+                            if (quorumResult.isPresent()) {
+                                quorumReached = true;
+                                // O quórum está presente, extraia os saldos do Optional
+                                Integer ledgerLocation = quorumResult.get();
+
+                                if (ledgerLocation == -1) {
+                                    System.out.println("Transfer failed: Invalid destiny account");
+                                }
+                                else if (ledgerLocation == -2) {
+                                    System.out.println("Transfer failed: Insufficient funds");
+                                }
+                                else {
+                                    // Saída dos saldos do quórum
+                                    System.out.println("Quorum reached.");
+                                    System.out.println("Your ledger location is: " + ledgerLocation);
+                                }
+                            }
+                        }
+
+                        // Continue a saída para esperar pelo quórum se ainda não tiver sido alcançado
+                        if (!quorumReached) {
+                            System.out.println("Waiting for a quorum...");
+                        }
+
                     }
-                    else if (confirmationMessage.getLedgerMessageLocation() == -2) {
-                        System.out.println("Transfer failed: Insufficient funds");
-                    }
-                    else if (confirmationMessage.getLedgerMessageLocation() == 1) {
-                        System.out.println("Transfer completed successfully.");
-                    }
-                    listen = false;
                 }
+
+                // Todos os nós responderam
+                System.out.println("All nodes have responded.");
+                transferConfirmationMessages.clearTransferConfirmationMessage();
+
+            } catch (IOException | ClassNotFoundException e) {
+                e.printStackTrace();
             }
-        } catch (IOException | ClassNotFoundException e) {
-            e.printStackTrace();
-        }
+        });
+    }
+
+    public void shutdown() {
+        executorService.shutdownNow();
     }
 
 }
