@@ -274,7 +274,7 @@ public class NodeService implements UDPService {
             }
             
             Block lastBlock = blockChain.getLastBlock();
-            String lastBlockHash = CryptSignature.hashString(lastBlock.toString());
+            byte[] lastBlockHash = CryptSignature.hash(new Gson().toJson(lastBlock).getBytes());
             blockChain.createBlock(lastBlockHash);
         }
         else if (value.charAt(0) == 'A') {
@@ -285,7 +285,7 @@ public class NodeService implements UDPService {
             }
 
             Block lastBlock = blockChain.getLastBlock();
-            String lastBlockHash = CryptSignature.hashString(lastBlock.toString());
+            byte[] lastBlockHash = CryptSignature.hash(new Gson().toJson(lastBlock).getBytes());
             blockChain.createBlock(lastBlockHash);
         }
     }

@@ -6,11 +6,11 @@ import pt.ulisboa.tecnico.hdsledger.utilities.Transaction;
 
 public class Block {
     private List<Transaction> transactions;
-    private final String previousHash; 
+    private final byte[] previousHash; 
     private final long nonce;
     private final long timestamp;
     
-    public Block(List<Transaction> transactions, String previousHash, long nonce, long timestamp) {
+    public Block(List<Transaction> transactions, byte[] previousHash, long nonce, long timestamp) {
         this.transactions = transactions;
         this.previousHash = previousHash;
         this.nonce = nonce;
@@ -25,7 +25,7 @@ public class Block {
         this.transactions = transactions;
     }
 
-    public String getPreviousHash() {
+    public byte[] getPreviousHash() {
         return previousHash;
     }
 

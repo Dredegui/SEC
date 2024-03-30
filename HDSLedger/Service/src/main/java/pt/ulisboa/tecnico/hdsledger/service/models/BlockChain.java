@@ -16,10 +16,12 @@ public class BlockChain {
         chain = new ArrayList<>();
         currentTransactions = new ArrayList<>();
         listOfAppends = new ArrayList<>();
-        createBlock("0");
+        // initialize a byte[] with 0
+        byte[] previousHash = null;
+        createBlock(previousHash);
     }
     
-    public Block createBlock(String previousHash) {
+    public Block createBlock(byte[] previousHash) {
         Block block = new Block(currentTransactions, previousHash, 0, System.currentTimeMillis());
         this.chain.add(block);
         this.currentTransactions = new ArrayList<>();
