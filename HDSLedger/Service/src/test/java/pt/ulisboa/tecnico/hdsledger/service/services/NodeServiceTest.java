@@ -57,7 +57,7 @@ public class NodeServiceTest {
 
             System.out.println(log);
             // Abstraction to send and receive messages
-            Link linkToNodes = new Link(nodeConfig, private_key_path, nodeConfig.getPort(), nodeConfigs,
+            Link linkToNodes = new Link(nodeConfig, nodeConfig.getPort(), nodeConfigs,
                 ConsensusMessage.class);
             if (i == 1) {
                 // Spy linkToNodes 
@@ -72,7 +72,7 @@ public class NodeServiceTest {
             }
 
             // Services that implement listen from UDPService
-            NodeService nodeService = new NodeService(linkToNodes, nodeConfig, leaderConfig,
+            NodeService nodeService = new NodeService(linkToNodes, private_key_path, nodeConfig, leaderConfig,
                 nodeConfigs);
             nodeServices.put(id, nodeService);
             nodeService.listen();
@@ -86,7 +86,6 @@ public class NodeServiceTest {
         listOfAppends.add(append);
         String actualValue = nodeServices.get("1").serializeListOfAppends(listOfAppends);
         for (int i = 1; i <= 4; i++) {
-            // TODO create append message
             nodeServices.get(Integer.toString(i)).startConsensus(actualValue);
         }
         // sleep for 3 seconds
@@ -96,6 +95,7 @@ public class NodeServiceTest {
             e.printStackTrace();
         }
         // get leader from nodeServices 2
+        System.out.println("Leader is 2? " + nodeServices.get("3").isLeader("2"));
         assertEquals(true, nodeServices.get("2").getConfig().isLeader());
         // get ledger from all nodeServices except 1 (it's byzantine)
         for (int i = 2; i <= 4; i++) {
@@ -113,12 +113,12 @@ public class NodeServiceTest {
         for (int i = 2; i <= 4; i++) {
             // For testing effects of new consensus starting, we will not start consensus on node 1
             // Because it's byzantine and it didn't commit the last consensus because it only send messages to node 2
-            // TODO create append message
             nodeServices.get(Integer.toString(i)).startConsensus(actualValue);
         }
 
         assertEquals(2, nodeServices.get("3").getConsensusInstance());
         assertEquals(1, nodeServices.get("3").getConsensusInstanceRound(2));
+        System.out.println("Leader is 1? " + nodeServices.get("3").isLeader("1"));
         assertEquals(true, nodeServices.get("3").isLeader("1"));
         // for all nodeServices close their sockets
         for (int i = 1; i <= 4; i++) {
@@ -155,7 +155,7 @@ public class NodeServiceTest {
 
             System.out.println(log);
             // Abstraction to send and receive messages
-            Link linkToNodes = new Link(nodeConfig, private_key_path, nodeConfig.getPort(), nodeConfigs,
+            Link linkToNodes = new Link(nodeConfig, nodeConfig.getPort(), nodeConfigs,
                 ConsensusMessage.class);
             if (i == 4) {
                 // Spy linkToNodes 
@@ -166,7 +166,7 @@ public class NodeServiceTest {
             }
 
             // Services that implement listen from UDPService
-            NodeService nodeService = new NodeService(linkToNodes, nodeConfig, leaderConfig,
+            NodeService nodeService = new NodeService(linkToNodes, private_key_path, nodeConfig, leaderConfig,
                 nodeConfigs);
             nodeServices.put(id, nodeService);
             nodeService.listen();
@@ -180,7 +180,6 @@ public class NodeServiceTest {
         listOfAppends.add(append);
         String actualValue = nodeServices.get("1").serializeListOfAppends(listOfAppends);
         for (int i = 1; i <= 4; i++) {
-            // TODO create append message
             nodeServices.get(Integer.toString(i)).startConsensus(actualValue);
         }
         // sleep for 7 seconds
@@ -225,10 +224,10 @@ public class NodeServiceTest {
 
             System.out.println(log);
             // Abstraction to send and receive messages
-            Link linkToNodes = new Link(nodeConfig, private_key_path, nodeConfig.getPort(), nodeConfigs,
+            Link linkToNodes = new Link(nodeConfig, nodeConfig.getPort(), nodeConfigs,
                 ConsensusMessage.class);
             // Services that implement listen from UDPService
-            NodeService nodeService = new NodeService(linkToNodes, nodeConfig, leaderConfig,
+            NodeService nodeService = new NodeService(linkToNodes, private_key_path, nodeConfig, leaderConfig,
                 nodeConfigs);
             nodeServices.put(id, nodeService);
             nodeService.listen();
