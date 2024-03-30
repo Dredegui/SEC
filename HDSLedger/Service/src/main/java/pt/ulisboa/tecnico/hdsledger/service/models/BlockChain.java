@@ -10,7 +10,7 @@ public class BlockChain {
     private List<Block> chain;
     private List<Transaction> currentTransactions;
     private List<Append> listOfAppends;
-    private int numberOfTransactionsPerBlock = 1;
+    private int numberOfTransactionsPerBlock = 3;
     
     public BlockChain() {
         chain = new ArrayList<>();
