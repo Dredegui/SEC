@@ -8,14 +8,11 @@ public class AppendMessage {
     private String value;
     // Nonce
     private int nonce;
-    // Signature
-    private byte[] signature;
 
     // This is a client id
-    public AppendMessage(String value, int nonce, byte[] signature) {
+    public AppendMessage(String value, int nonce) {
         this.value = value;
         this.nonce = nonce;
-        this.signature = signature;
     }
 
     public String getValue() {
@@ -24,10 +21,6 @@ public class AppendMessage {
 
     public int getNonce() {
         return nonce;
-    }
-
-    public byte[] getSignature() {
-        return signature;
     }
 
     public String toJson() {
