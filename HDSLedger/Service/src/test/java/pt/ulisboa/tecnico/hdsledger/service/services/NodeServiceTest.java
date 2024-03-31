@@ -20,6 +20,7 @@ import pt.ulisboa.tecnico.hdsledger.utilities.Append;
 import pt.ulisboa.tecnico.hdsledger.utilities.CryptSignature;
 import pt.ulisboa.tecnico.hdsledger.utilities.ProcessConfig;
 import pt.ulisboa.tecnico.hdsledger.utilities.ProcessConfigBuilder;
+import pt.ulisboa.tecnico.hdsledger.utilities.Transaction;
 
 @Execution(ExecutionMode.SAME_THREAD)
 public class NodeServiceTest {
@@ -266,6 +267,129 @@ public class NodeServiceTest {
         for (int i = 1; i <= 4; i++) {
             assertEquals(actualValue, nodeServices.get(Integer.toString(i)).getLedger().get(0));
         }
+        for (int i = 1; i <= 4; i++) {
+            nodeServices.get(Integer.toString(i)).close();
+        }
+        Thread.getAllStackTraces().keySet().forEach(Thread::interrupt);
+    }
+
+    @Test
+    public void transactionNonByzantine() {
+        // Simulate node behaviour
+        // Create configuration instances and save node services to a list
+        
+        System.out.println("-------------------------------------------------");
+        System.out.println("---------------transactionNonByzantine-----------");
+        System.out.println("-------------------------------------------------");
+        HashMap<String, NodeService> nodeServices = new HashMap<>();
+        for (int i = 1; i <= 4; i++) {
+            String id = Integer.toString(i);
+            String private_key_path = "src/main/resources/privateKeys/rk_" + id + ".key";
+            String nodesConfigPath = "src/main/resources/regular_config.json";
+            
+            // Create configuration instances
+            ProcessConfig[] nodeConfigs = new ProcessConfigBuilder().fromFile(nodesConfigPath);
+            ProcessConfig leaderConfig = Arrays.stream(nodeConfigs).filter(ProcessConfig::isLeader).findAny().get();
+            ProcessConfig nodeConfig = Arrays.stream(nodeConfigs).filter(c -> c.getId().equals(id)).findAny().get();
+
+            String log = MessageFormat.format("{0} - Running at {1}:{2}; is leader: {3}; public key: {4}",
+                nodeConfig.getId(), nodeConfig.getHostname(), nodeConfig.getPort(),
+                nodeConfig.isLeader(), nodeConfig.getPublicKey());
+
+            System.out.println(log);
+            // Abstraction to send and receive messages
+            Link linkToNodes = new Link(nodeConfig, nodeConfig.getPort(), nodeConfigs,
+                ConsensusMessage.class);
+            // Services that implement listen from UDPService
+            NodeService nodeService = new NodeService(linkToNodes, private_key_path, nodeConfig, leaderConfig,
+                nodeConfigs);
+            nodeServices.put(id, nodeService);
+            nodeService.listen();
+        }
+        // Client will transfer money from client to client1
+        double amount = 100;
+        String sourcePublicKeyHash = CryptSignature.hashString(CryptSignature.loadPublicKey("src/main/resources/publicKeys/clientPublic.key"));
+        String destinyPublicKeyHash = CryptSignature.hashString(CryptSignature.loadPublicKey("src/main/resources/publicKeys/client1Public.key"));
+        double clientBalance = nodeServices.get("1").getAccount(sourcePublicKeyHash).getContablisticBalance();
+        double client1Balance = nodeServices.get("1").getAccount(destinyPublicKeyHash).getContablisticBalance();
+        int nonce = 1;
+        byte[] data = (sourcePublicKeyHash + destinyPublicKeyHash + amount + nonce).getBytes();
+        byte[] signature = CryptSignature.sign(data, "src/main/resources/privateKeys/rk_client.key");
+        List<Transaction> listOfTransactions = new ArrayList<>();
+        Transaction transaction = new Transaction(sourcePublicKeyHash, destinyPublicKeyHash, amount, signature, nonce);
+        listOfTransactions.add(transaction);
+        String actualValue = nodeServices.get("1").serializeCurrentTransactions(listOfTransactions);
+        for (int i = 1; i <= 4; i++) {
+            nodeServices.get(Integer.toString(i)).startConsensus(actualValue);
+        }
+        // sleep for 6 seconds
+        try {
+            Thread.sleep(6000);
+        } catch (InterruptedException e) {
+            e.printStackTrace();
+        }
+        // Transfer should be successful, so balances should be updated
+        assertEquals(clientBalance - amount, nodeServices.get("1").getAccount(sourcePublicKeyHash).getContablisticBalance(), 0.0001);
+        assertEquals(client1Balance + amount, nodeServices.get("1").getAccount(destinyPublicKeyHash).getContablisticBalance(), 0.0001);
+        for (int i = 1; i <= 4; i++) {
+            nodeServices.get(Integer.toString(i)).close();
+        }
+        Thread.getAllStackTraces().keySet().forEach(Thread::interrupt);
+    }
+
+    @Test
+    public void byzantineClient() {
+        // Node 4 will be byzantine and we do not send messages
+        // Simulate node behaviour
+        // Create configuration instances and save node services to a list
+        
+        System.out.println("-------------------------------------------------");
+        System.out.println("----------------byzantineClient-----------------");
+        System.out.println("-------------------------------------------------");
+        HashMap<String, NodeService> nodeServices = new HashMap<>();
+        for (int i = 1; i <= 4; i++) {
+            String id = Integer.toString(i);
+            String private_key_path = "src/main/resources/privateKeys/rk_" + id + ".key";
+            String nodesConfigPath = "src/main/resources/regular_config.json";
+            
+            // Create configuration instances
+            ProcessConfig[] nodeConfigs = new ProcessConfigBuilder().fromFile(nodesConfigPath);
+            ProcessConfig leaderConfig = Arrays.stream(nodeConfigs).filter(ProcessConfig::isLeader).findAny().get();
+            ProcessConfig nodeConfig = Arrays.stream(nodeConfigs).filter(c -> c.getId().equals(id)).findAny().get();
+
+            String log = MessageFormat.format("{0} - Running at {1}:{2}; is leader: {3}; public key: {4}",
+                nodeConfig.getId(), nodeConfig.getHostname(), nodeConfig.getPort(),
+                nodeConfig.isLeader(), nodeConfig.getPublicKey());
+
+            System.out.println(log);
+            // Abstraction to send and receive messages
+            Link linkToNodes = new Link(nodeConfig, nodeConfig.getPort(), nodeConfigs,
+                ConsensusMessage.class);
+            // Services that implement listen from UDPService
+            NodeService nodeService = new NodeService(linkToNodes, private_key_path, nodeConfig, leaderConfig,
+                nodeConfigs);
+            nodeServices.put(id, nodeService);
+            nodeService.listen();
+        }
+        // Client will attempt to transfer money from client1 to himself
+        double amount = 100;
+        int nonce = 1;
+        String sourcePublicKeyHash = CryptSignature.hashString(CryptSignature.loadPublicKey("src/main/resources/publicKeys/client1Public.key"));
+        String destinyPublicKeyHash = CryptSignature.hashString(CryptSignature.loadPublicKey("src/main/resources/publicKeys/clientPublic.key"));
+        double clientBalance = nodeServices.get("1").getAccount(destinyPublicKeyHash).getContablisticBalance();
+        double client1Balance = nodeServices.get("1").getAccount(sourcePublicKeyHash).getContablisticBalance();
+        byte[] data = (sourcePublicKeyHash + destinyPublicKeyHash + amount + nonce).getBytes();
+        byte[] signature = CryptSignature.sign(data, "src/main/resources/privateKeys/rk_client.key");
+        List<Transaction> listOfTransactions = new ArrayList<>();
+        Transaction transaction = new Transaction(sourcePublicKeyHash, destinyPublicKeyHash, amount, signature, nonce);
+        listOfTransactions.add(transaction);
+        String actualValue = nodeServices.get("1").serializeCurrentTransactions(listOfTransactions);
+        for (int i = 1; i <= 4; i++) {
+            nodeServices.get(Integer.toString(i)).startConsensus(actualValue);
+        }
+        // Transfer should not be successful, so balances should remain the same
+        assertEquals(clientBalance, nodeServices.get("1").getAccount(destinyPublicKeyHash).getContablisticBalance(), 0.0001);
+        assertEquals(client1Balance, nodeServices.get("1").getAccount(sourcePublicKeyHash).getContablisticBalance(), 0.0001);
         for (int i = 1; i <= 4; i++) {
             nodeServices.get(Integer.toString(i)).close();
         }
