@@ -561,13 +561,13 @@ public class NodeService implements UDPService {
         if (receiverAccount==null) {
             // wrong destiny account
             this.link.send(message.getSenderId(), new ConsensusMessageBuilder(this.config.getId(), Message.Type.CONFIRMATION)
-                    .setMessage(new ConfirmationMessage(-1).toJson())
+                    .setMessage(new ConfirmationMessage(-1, nonce).toJson())
                     .build());
         }
         else if (!senderAccount.hasEnoughAuthorizedBalance(amount)) {
             // send to the client a message saying that the transfer was not possible
             this.link.send(message.getSenderId(), new ConsensusMessageBuilder(this.config.getId(), Message.Type.CONFIRMATION)
-                    .setMessage(new ConfirmationMessage(-2).toJson())
+                    .setMessage(new ConfirmationMessage(-2, nonce).toJson())
                     .build());
         }
         else {
@@ -850,8 +850,9 @@ public class NodeService implements UDPService {
                     for(Transaction t : currentTransactions) {
                         String clientId = getClientIdFromHash(t.getSender());
                         this.link.send(clientId, new ConsensusMessageBuilder(this.config.getId(), Message.Type.CONFIRMATION)
-                            .setMessage(new ConfirmationMessage(consensusInstance-1).toJson())
+                            .setMessage(new ConfirmationMessage(consensusInstance-1, t.getNonce()).toJson())
                             .build());
+                        System.out.println("LedgerLocation:" + (consensusInstance-1) + "Nonce: " + t.getNonce() );
                     }
                     
                 }
@@ -859,7 +860,7 @@ public class NodeService implements UDPService {
                     List<Append> listOfAppends = deserializeAppends(value.substring(1));
                     for(Append a : listOfAppends) {
                         this.link.send(a.getCLientId(), new ConsensusMessageBuilder(this.config.getId(), Message.Type.CONFIRMATION)
-                            .setMessage(new ConfirmationMessage(consensusInstance-1).toJson())
+                            .setMessage(new ConfirmationMessage(consensusInstance-1, a.getNonce()).toJson())
                             .build());
                     }
 
