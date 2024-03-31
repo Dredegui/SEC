@@ -38,6 +38,8 @@ public class Link {
     private final AtomicInteger messageCounter = new AtomicInteger(0);
     // Send messages to self by pushing to queue instead of through the network
     private final Queue<Message> localhostQueue = new ConcurrentLinkedQueue<>();
+    // Boolean for link state for testing purposes
+    private boolean isClosed = false;
 
     public Link(ProcessConfig self, int port, ProcessConfig[] nodes, Class<? extends Message> messageClass) {
         this(self, port, nodes, messageClass, false, 200);
@@ -162,6 +164,8 @@ public class Link {
      * @param data The message to be sent
      */
     public void unreliableSend(InetAddress hostname, int port, Message data, byte[] mac) {
+        if (isClosed) 
+            return;
         new Thread(() -> {
             try {
                 byte[] buf = new Gson().toJson(data).getBytes();
@@ -286,6 +290,7 @@ public class Link {
     // Close socket
     public void close() {
         // Close socket in a way where it doesnt send a expection if someone is receiving from this socket
+        isClosed = true;
         try {
             socket.close();
             socket.disconnect();
