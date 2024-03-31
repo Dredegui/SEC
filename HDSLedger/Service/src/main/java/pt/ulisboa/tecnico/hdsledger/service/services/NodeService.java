@@ -745,11 +745,16 @@ public class NodeService implements UDPService {
         System.out.println(msg);
         // Doesn't add duplicate messages
         prepareMessages.addMessage(message);
-
         // Set instance values
         this.instanceInfo.putIfAbsent(consensusInstance, new InstanceInfo(value));
         InstanceInfo instance = this.instanceInfo.get(consensusInstance);
-
+        if (instance.getCurrentRound() > round) {
+            LOGGER.log(Level.INFO,
+                    MessageFormat.format(
+                            "{0} - Old round PREPARE message for Consensus Instance {1}, Round {2}, ignoring",
+                            config.getId(), consensusInstance, round));
+            return;
+        }
         // Within an instance of the algorithm, each upon rule is triggered at most once
         // for any round r
         // Late prepare (consensus already ended for other nodes) only reply to him (as
@@ -828,12 +833,20 @@ public class NodeService implements UDPService {
         commitMessages.addMessage(message);
 
         InstanceInfo instance = this.instanceInfo.get(consensusInstance);
-
+        
         if (instance == null) {
             // Should never happen because only receives commit as a response to a prepare message
             MessageFormat.format(
                     "{0} - CRITICAL: Received COMMIT message from {1}: Consensus Instance {2}, Round {3} BUT NO INSTANCE INFO",
                     config.getId(), message.getSenderId(), consensusInstance, round);
+            return;
+        }
+
+        if (instance.getCurrentRound() > round) {
+            LOGGER.log(Level.INFO,
+                    MessageFormat.format(
+                            "{0} - Old round PREPARE message for Consensus Instance {1}, Round {2}, ignoring",
+                            config.getId(), consensusInstance, round));
             return;
         }
 
