@@ -18,8 +18,7 @@ public class MessageBucket {
     // List of CheckBalanceMessages
     private List<CheckBalanceMessage> balanceMessages = new CopyOnWriteArrayList<>();
 
-    // List of ConfirmationMessages for tranfers
-    private List<ConfirmationMessage> transferConfirmationMessages = new CopyOnWriteArrayList<>();
+    private Map<Integer, List<ConfirmationMessage>> transferConfirmationMessages = new HashMap<>();
 
     // List of ConfirmationMessages for appends
     private List<ConfirmationMessage> appendConfirmationMessages = new CopyOnWriteArrayList<>();
@@ -38,11 +37,10 @@ public class MessageBucket {
     }
 
     public void addTransferConfirmationMessage(ConfirmationMessage message) {
-        transferConfirmationMessages.add(message);
-    }
-
-    public void clearTransferConfirmationMessage() {
-        transferConfirmationMessages.clear();
+        if (!transferConfirmationMessages.containsKey(message.getNonce())) {
+            transferConfirmationMessages.put(message.getNonce(), new CopyOnWriteArrayList<>());
+        }
+        transferConfirmationMessages.get(message.getNonce()).add(message);
     }
 
     public void addAppendConfirmationMessage(ConfirmationMessage message) {
@@ -53,44 +51,40 @@ public class MessageBucket {
         appendConfirmationMessages.clear();
     }
 
-    public Optional<Double[]> hasValidCheckBalanceQuorum() {
-        Map<Double, Integer> authorizedFrequency = new HashMap<>();
-        Map<Double, Integer> contabilisticFrequency = new HashMap<>();
+    public Optional<String> hasValidCheckBalanceQuorum() {
+        Map<String, Integer> balanceFrequency = new HashMap<>();
 
         // Process the list of CheckBalanceMessages
         for (CheckBalanceMessage message : balanceMessages) {
             Double authorizedBalance = message.getAutorizedBalance();
             Double contabilisticBalance = message.getContablisticBalance();
 
-            authorizedFrequency.put(authorizedBalance, authorizedFrequency.getOrDefault(authorizedBalance, 0) + 1);
-            contabilisticFrequency.put(contabilisticBalance, contabilisticFrequency.getOrDefault(contabilisticBalance, 0) + 1);
+            // Create a key for the balance pair
+            String key = authorizedBalance + ":" + contabilisticBalance;
+
+            // Increment the frequency of the balance pair
+            balanceFrequency.put(key, balanceFrequency.getOrDefault(key, 0) + 1);
         }
 
-        // Determine quorum for authorized balance
-        Optional<Double> authorizedQuorum = authorizedFrequency.entrySet().stream()
+        // Determine quorum for balance
+        Optional<String> balanceQuorum = balanceFrequency.entrySet().stream()
             .filter(entry -> entry.getValue() >= quorumSize)
             .map(Map.Entry::getKey)
             .findFirst();
 
-        // Determine quorum for contabilistic balance
-        Optional<Double> contabilisticQuorum = contabilisticFrequency.entrySet().stream()
-            .filter(entry -> entry.getValue() >= quorumSize)
-            .map(Map.Entry::getKey)
-            .findFirst();
 
-        // Return a combined Optional of both balances if both quorums are present
-        if (authorizedQuorum.isPresent() && contabilisticQuorum.isPresent()) {
-            return Optional.of(new Double[] {authorizedQuorum.get(), contabilisticQuorum.get()});
+        if (balanceQuorum.isPresent() ) {
+            return balanceQuorum;
         }
 
         // If either quorum is not present, return an empty Optional
         return Optional.empty();
     }
 
-    public Optional<Integer> hasValidTransferConfirmationQuorom()  {
+    public Optional<Integer> hasValidTransferConfirmationQuorom(int nonce)  {
         Map<Integer,Integer> transferLedgerFrequency = new HashMap<>();
-
-        for (ConfirmationMessage message : transferConfirmationMessages) {
+        List<ConfirmationMessage> transferMessages = this.transferConfirmationMessages.get(nonce);
+        for (ConfirmationMessage message : transferMessages) {
             int ledgerMessageLocation = message.getLedgerMessageLocation();
 
             transferLedgerFrequency.put(ledgerMessageLocation, transferLedgerFrequency.getOrDefault(ledgerMessageLocation, 0) + 1);
@@ -108,16 +102,18 @@ public class MessageBucket {
         return Optional.empty();
     }
 
-    public Optional<Integer> hasValidAppendConfirmationQuorom()  {
-        Map<Integer,Integer> appendLedgerFrequency = new HashMap<>();
+    public Optional<String> hasValidAppendConfirmationQuorom()  {
+        Map<String,Integer> appendLedgerFrequency = new HashMap<>();
 
         for (ConfirmationMessage message : appendConfirmationMessages) {
             int ledgerMessageLocation = message.getLedgerMessageLocation();
+            int nonce = message.getNonce();
+            String key= ledgerMessageLocation + ":" + nonce;
 
-            appendLedgerFrequency.put(ledgerMessageLocation, appendLedgerFrequency.getOrDefault(ledgerMessageLocation, 0) + 1);
+            appendLedgerFrequency.put(key, appendLedgerFrequency.getOrDefault(key, 0) + 1);
         }
 
-        Optional<Integer> appendLedgerQuorum = appendLedgerFrequency.entrySet().stream()
+        Optional<String> appendLedgerQuorum = appendLedgerFrequency.entrySet().stream()
             .filter(entry -> entry.getValue() >= quorumSize)
             .map(Map.Entry::getKey)
             .findFirst();
