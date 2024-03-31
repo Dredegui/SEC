@@ -90,7 +90,7 @@ public class NodeService implements UDPService {
     // Nonce map (clientId -> nonce)
     private Map<String, ArrayList<Integer>> nonces = new ConcurrentHashMap<>();
 
-
+    // Timer
     private Timer timer;
     
     private TimerTask task;
@@ -137,6 +137,10 @@ public class NodeService implements UDPService {
 
     public ArrayList<String> getLedger() {
         return this.ledger;
+    }
+
+    public Account getAccount(String publicKeyHash) {
+        return accounts.get(publicKeyHash);
     }
 
     public BlockChain getBlockChain() {
@@ -333,8 +337,8 @@ public class NodeService implements UDPService {
     public synchronized void activateTimer(long delay, int round) {
         if (task != null) {
             task.cancel();
+            timer.purge();
         }
-
         task = new TimerTask() {
             @Override
             public void run() {
@@ -786,7 +790,6 @@ public class NodeService implements UDPService {
      * @param message Message to be handled
      */
     public synchronized void uponCommit(ConsensusMessage message) {
-
         int consensusInstance = message.getConsensusInstance();
         int round = message.getRound();
         CommitMessage commitMessage = message.deserializeCommitMessage();
@@ -888,6 +891,7 @@ public class NodeService implements UDPService {
 
     // Close link socket
     public void close() {
+        stopTimer();  
         link.close();
     }
 
