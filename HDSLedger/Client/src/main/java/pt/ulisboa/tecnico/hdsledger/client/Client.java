@@ -84,7 +84,6 @@ public class Client {
     
             // Close the scanner
             scanner.close();
-            clientService.shutdown();
         }
 
     public static void main(String[] args) {
@@ -107,12 +106,11 @@ public class Client {
 
         String publicKey = CryptSignature.loadPublicKey(nodeConfig.getPublicKey());
         String publicKeyHash = CryptSignature.hashString(publicKey);
+        
+        clientService.infiniteListen();
 
         // Start CLI
         client.cli(id,publicKeyHash);
 
-        Runtime.getRuntime().addShutdownHook(new Thread(() -> {
-            clientService.shutdown();
-        }));
     }
 }
