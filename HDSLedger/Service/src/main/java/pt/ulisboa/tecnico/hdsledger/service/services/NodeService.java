@@ -143,6 +143,10 @@ public class NodeService implements UDPService {
         return accounts.get(publicKeyHash);
     }
 
+    public int getGas() {
+        return this.gas;
+    }
+
     public BlockChain getBlockChain() {
         return this.blockChain;
     }
@@ -295,13 +299,15 @@ public class NodeService implements UDPService {
                 Account receiverAccount = accounts.get(t.getReceiver());
 
                 double totalCostTransaction = t.getAmount() + gas;
-
-                senderAccount.updateContablisticBalance(-totalCostTransaction);
-                senderAccount.setAuthorizedBalance(senderAccount.getContablisticBalance());
-
-                receiverAccount.updateContablisticBalance(t.getAmount());
-                receiverAccount.setAuthorizedBalance(receiverAccount.getContablisticBalance());
-
+                try {
+                    senderAccount.updateBookBalance(-totalCostTransaction);
+                    senderAccount.setAuthorizedBalance(senderAccount.getBookBalance());
+                    
+                    receiverAccount.updateBookBalance(t.getAmount());
+                    receiverAccount.setAuthorizedBalance(receiverAccount.getBookBalance());
+                } catch (IllegalArgumentException e) {
+                    LOGGER.log(Level.SEVERE, MessageFormat.format("{0} - Transaction invalid, should never happen", config.getId()));
+                }
             }
             
             Block lastBlock = blockChain.getLastBlock();
@@ -464,6 +470,8 @@ public class NodeService implements UDPService {
             .setReplyTo(message.getSenderId())
             .setReplyToMessageId(message.getMessageId())
             .setMessage(instance.getCommitMessage().toJson())
+            .setOriginalSenderId(config.getId())
+            .setSignature(CryptSignature.sign((config.getId() + instance.getCommitMessage().getValue()).getBytes(), privateKeyPath))
             .build();
             link.send(message.getSenderId(), m);
         }
@@ -526,7 +534,7 @@ public class NodeService implements UDPService {
         if (account!=null) { 
 
             double authorizedBalance = account.getAuthorizedBalance();
-            double contablisticBalance = account.getContablisticBalance();
+            double contablisticBalance = account.getBookBalance();
 
             CheckBalanceMessage reply = new CheckBalanceMessage(authorizedBalance, contablisticBalance);
             byte[] signature = CryptSignature.sign((this.config.getId() + authorizedBalance + contablisticBalance).getBytes(), privateKeyPath);
@@ -579,12 +587,21 @@ public class NodeService implements UDPService {
                     .build());
         }
         else {
+            // Update the authorized balance
+            try {
+
+                double totalCostTransaction = amount + gas;
+                senderAccount.updateAuthorizedBalance(totalCostTransaction);
+            } catch (IllegalArgumentException e) {
+                // send to the client a message saying that the transfer was not possible
+                this.link.send(message.getSenderId(), new ConsensusMessageBuilder(this.config.getId(), Message.Type.CONFIRMATION)
+                        .setMessage(new ConfirmationMessage(-2, nonce).toJson())
+                        .build());
+                return;
+            }
             // add the transaction to the list of current transactions
             blockChain.addTransaction(senderAccount.getPublicKeyHash(), receiverAccount.getPublicKeyHash(), amount, signature, nonce);
 
-            // Update the authorized balance
-            double totalCostTransaction = amount + gas;
-            senderAccount.updateAuthorizedBalance(totalCostTransaction);
 
             if(blockChain.isReadyToProcessTransactions()) {
                 String currentTransactionsString = serializeCurrentTransactions(blockChain.getCurrentTransactions());
@@ -839,45 +856,47 @@ public class NodeService implements UDPService {
             String value = commitValue.get();
             // Append value to the ledger (must be synchronized to be thread-safe)
             synchronized(ledger) {
-                if (ledger.size() < consensusInstance - 1) {
-                    return;
-                }
-                // Increment size of ledger to accommodate current instance
-                ledger.ensureCapacity(consensusInstance);
-                while (ledger.size() < consensusInstance - 1) {
-                    ledger.add("");
-                }
-                
-                ledger.add(consensusInstance - 1, value);
-
-                // Create te block for each operation (Transactions or Append) and updates the balances
-                commitValues(value);
-
-                if(value.charAt(0) == 'T') {
-                    List<Transaction> currentTransactions = deserializeCurrentTransactions(value.substring(1));
-                    for(Transaction t : currentTransactions) {
-                        String clientId = getClientIdFromHash(t.getSender());
-                        this.link.send(clientId, new ConsensusMessageBuilder(this.config.getId(), Message.Type.CONFIRMATION)
-                            .setMessage(new ConfirmationMessage(consensusInstance-1, t.getNonce()).toJson())
-                            .build());
-                        System.out.println("LedgerLocation:" + (consensusInstance-1) + "Nonce: " + t.getNonce() );
+                synchronized(blockChain) {
+                    if (ledger.size() < consensusInstance - 1) {
+                        return;
+                    }
+                    // Increment size of ledger to accommodate current instance
+                    ledger.ensureCapacity(consensusInstance);
+                    while (ledger.size() < consensusInstance - 1) {
+                        ledger.add("");
                     }
                     
-                }
-                else if (value.charAt(0) == 'A') {
-                    List<Append> listOfAppends = deserializeAppends(value.substring(1));
-                    for(Append a : listOfAppends) {
-                        this.link.send(a.getCLientId(), new ConsensusMessageBuilder(this.config.getId(), Message.Type.CONFIRMATION)
-                            .setMessage(new ConfirmationMessage(consensusInstance-1, a.getNonce()).toJson())
-                            .build());
-                    }
+                    ledger.add(consensusInstance - 1, value);
 
+                    // Create te block for each operation (Transactions or Append) and updates the balances
+                    commitValues(value);
+
+                    if(value.charAt(0) == 'T') {
+                        List<Transaction> currentTransactions = deserializeCurrentTransactions(value.substring(1));
+                        for(Transaction t : currentTransactions) {
+                            String clientId = getClientIdFromHash(t.getSender());
+                            this.link.send(clientId, new ConsensusMessageBuilder(this.config.getId(), Message.Type.CONFIRMATION)
+                                .setMessage(new ConfirmationMessage(consensusInstance-1, t.getNonce()).toJson())
+                                .build());
+                            System.out.println("LedgerLocation:" + (consensusInstance-1) + "Nonce: " + t.getNonce() );
+                        }
+                        
+                    }
+                    else if (value.charAt(0) == 'A') {
+                        List<Append> listOfAppends = deserializeAppends(value.substring(1));
+                        for(Append a : listOfAppends) {
+                            this.link.send(a.getCLientId(), new ConsensusMessageBuilder(this.config.getId(), Message.Type.CONFIRMATION)
+                                .setMessage(new ConfirmationMessage(consensusInstance-1, a.getNonce()).toJson())
+                                .build());
+                        }
+
+                    }
+            
+                    LOGGER.log(Level.INFO,
+                        MessageFormat.format(
+                                "{0} - Current Ledger: {1}",
+                                config.getId(), String.join("", ledger).charAt(0)));
                 }
-        
-                LOGGER.log(Level.INFO,
-                    MessageFormat.format(
-                            "{0} - Current Ledger: {1}",
-                            config.getId(), String.join("", ledger).charAt(0)));
             }
 
             lastDecidedConsensusInstance.getAndIncrement();

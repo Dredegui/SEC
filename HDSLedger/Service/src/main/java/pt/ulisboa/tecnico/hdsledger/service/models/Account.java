@@ -2,13 +2,13 @@ package pt.ulisboa.tecnico.hdsledger.service.models;
 
 public class Account {
     private double authorizedBalance;
-    private double contablisticBalance;
+    private double bookBalance;
     private String publicKeyHash;
 
 
     public Account(String publicKeyHash) {
         this.authorizedBalance = 1000;
-        this.contablisticBalance = 1000;
+        this.bookBalance = 1000;
         this.publicKeyHash = publicKeyHash;
     }
 
@@ -25,6 +25,9 @@ public class Account {
     }
 
     public void setAuthorizedBalance(double authorizedBalance) {
+        if (authorizedBalance < 0) {
+            throw new IllegalArgumentException("Authorized balance cannot be negative");
+        }
         this.authorizedBalance = authorizedBalance;
     }
 
@@ -33,19 +36,28 @@ public class Account {
     }
 
     public void updateAuthorizedBalance(double amount) {
+        if (amount < 0) {
+            throw new IllegalArgumentException("Amount cannot be negative");
+        }
         this.authorizedBalance -= amount;
     }
 
-    public void updateContablisticBalance(double amount) {
-        this.contablisticBalance += amount;
+    public void updateBookBalance(double amount) {
+        if (this.bookBalance + amount < 0) {
+            throw new IllegalArgumentException("Book balance cannot be negative");
+        }
+        this.bookBalance += amount;
     }
 
-    public double getContablisticBalance() {
-        return contablisticBalance;
+    public double getBookBalance() {
+        return bookBalance;
     }
 
-    public void setContablisticBalance(double contablisticBalance) {
-        this.contablisticBalance = contablisticBalance;
+    public void setBookBalance(double bookBalance) {
+        if (bookBalance < 0) {
+            throw new IllegalArgumentException("Book balance cannot be negative");
+        }
+        this.bookBalance = bookBalance;
     }
 }
 
