@@ -7,12 +7,19 @@ public class ConfirmationMessage {
     // Value
     private int ledgerMessageLocation;
 
-    public ConfirmationMessage(int ledgerMessageLocation) {
+    private int nonce;
+
+    public ConfirmationMessage(int ledgerMessageLocation, int nonce) {
         this.ledgerMessageLocation = ledgerMessageLocation;
+        this.nonce = nonce;
     }
 
     public int getLedgerMessageLocation() {
         return this.ledgerMessageLocation;
+    }
+
+    public int getNonce() {
+        return this.nonce;
     }
 
     public String toJson() {
