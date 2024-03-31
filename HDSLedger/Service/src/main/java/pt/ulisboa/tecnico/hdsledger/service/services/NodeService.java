@@ -76,6 +76,8 @@ public class NodeService implements UDPService {
     // Delay for the timer
     private final int delay = 1000;
 
+    private final int gas = 1;
+
     // Ledger (for now, just a list of strings)
     private ArrayList<String> ledger = new ArrayList<String>();
 
@@ -288,7 +290,9 @@ public class NodeService implements UDPService {
                 Account senderAccount = accounts.get(t.getSender());
                 Account receiverAccount = accounts.get(t.getReceiver());
 
-                senderAccount.updateContablisticBalance(-t.getAmount());
+                double totalCostTransaction = t.getAmount() + gas;
+
+                senderAccount.updateContablisticBalance(-totalCostTransaction);
                 senderAccount.setAuthorizedBalance(senderAccount.getContablisticBalance());
 
                 receiverAccount.updateContablisticBalance(t.getAmount());
@@ -575,7 +579,8 @@ public class NodeService implements UDPService {
             blockChain.addTransaction(senderAccount.getPublicKeyHash(), receiverAccount.getPublicKeyHash(), amount, signature, nonce);
 
             // Update the authorized balance
-            senderAccount.updateAuthorizedBalance(amount);
+            double totalCostTransaction = amount + gas;
+            senderAccount.updateAuthorizedBalance(totalCostTransaction);
 
             if(blockChain.isReadyToProcessTransactions()) {
                 String currentTransactionsString = serializeCurrentTransactions(blockChain.getCurrentTransactions());
